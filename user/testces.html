@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Cesium with Bing Aerial (Ion) & No Base Layer Picker</title>
+  <title>Cesium: Bing Aerial with Pin Creation</title>
   <!-- Cesium CSS -->
   <link 
     rel="stylesheet" 
@@ -19,6 +19,7 @@
       width: 100%;
       height: 100%;
       display: block;
+      background: #000;
     }
   </style>
 </head>
@@ -32,32 +33,71 @@
   ></script>
 
   <script>
-    // Set your Cesium Ion access token here:
-    Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI1ODgwZDk4YS1kNmM2LTQyMmUtYmU4MS00OWUyOTgxYjg3MWMiLCJpZCI6Mjk0MzMxLCJpYXQiOjE3NDQ3MjY5MDN9.GiksKrwslZbSBi62HqVdBBrPQKvSQwF5TT5KmmUPMRQ';
+    // Set your Cesium Ion access token:
+    Cesium.Ion.defaultAccessToken = 'YOUR_CESIUM_ION_TOKEN';
 
-    // Instead of using Cesium.buildModuleUrl to refer to local Natural Earth II assets,
-    // we create an imagery provider using Bing Aerial imagery hosted on Cesium Ion.
-    // Note: Bing Aerial imagery is available via assetId 2.
+    // Create a Bing Aerial imagery provider using the Ion asset with assetId 2.
     const bingAerialProvider = new Cesium.IonImageryProvider({ assetId: 2 });
 
-    // Use the default WGS84 ellipsoid (no 3D terrain)
+    // Use the WGS84 ellipsoid (no detailed 3D terrain).
     const ellipsoidTerrain = new Cesium.EllipsoidTerrainProvider();
 
-    // Create the Cesium Viewer with Bing Aerial imagery and disable the base layer picker.
+    // Initialize the Cesium Viewer using Bing Aerial imagery
+    // and disable the base layer picker to prevent users from switching the imagery.
     const viewer = new Cesium.Viewer('cesiumContainer', {
       imageryProvider: bingAerialProvider,
       terrainProvider: ellipsoidTerrain,
-      baseLayerPicker: false,  // Disable layer switching by the user
+      baseLayerPicker: false,
       animation: false,
       timeline: false
     });
 
-    // Fly the camera to an initial location (example coordinates)
+    // Fly the camera to an initial view (you can adjust these coordinates)
     viewer.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(-75.59777, 40.03883, 1500000)
+      destination: Cesium.Cartesian3.fromDegrees(-95, 40, 2500000)
     });
+
+    // Set up a double-click event handler to add pins.
+    const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+    handler.setInputAction((movement) => {
+      // Pick a position on the globe's ellipsoid.
+      const pickedPosition = viewer.camera.pickEllipsoid(movement.position);
+      if (Cesium.defined(pickedPosition)) {
+        // Convert the Cartesian position to geographical coordinates.
+        const cartographic = Cesium.Cartographic.fromCartesian(pickedPosition);
+        const lon = Cesium.Math.toDegrees(cartographic.longitude);
+        const lat = Cesium.Math.toDegrees(cartographic.latitude);
+
+        // Prompt the user for a title. (You could extend this with additional form fields if desired.)
+        const title = prompt("Enter a title for your pin:");
+        if (!title || title.trim() === "") {
+          return; // If canceled or empty, do nothing.
+        }
+        
+        // Add a new entity (pin) at the specified location.
+        viewer.entities.add({
+          position: Cesium.Cartesian3.fromDegrees(lon, lat),
+          billboard: {
+            image: 'https://cdn-icons-png.flaticon.com/512/1673/1673221.png', // Example pin icon
+            scale: 0.5,
+            verticalOrigin: Cesium.VerticalOrigin.BOTTOM
+          },
+          label: {
+            text: title,
+            font: '14pt sans-serif',
+            fillColor: Cesium.Color.WHITE,
+            outlineColor: Cesium.Color.BLACK,
+            outlineWidth: 2,
+            verticalOrigin: Cesium.VerticalOrigin.TOP,
+            pixelOffset: new Cesium.Cartesian2(0, -30)
+          },
+          description: title  // Using the title as description. You can expand this if needed.
+        });
+      }
+    }, Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
   </script>
 </body>
 </html>
+
 
 
