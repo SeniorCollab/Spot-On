@@ -2,14 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Cesium Demo: Bing Maps Aerial with Pin Creation</title>
+  <title>Cesium Demo: Ion Bing Aerial & Pin Creation</title>
   <!-- Cesium CSS -->
   <link
     rel="stylesheet"
     href="https://cesium.com/downloads/cesiumjs/releases/1.100/Build/Cesium/Widgets/widgets.css"
   />
   <style>
-    /* Fullscreen setup */
     html, body {
       margin: 0;
       padding: 0;
@@ -21,59 +20,58 @@
     #cesiumContainer {
       width: 100%;
       height: 100%;
-      display: block;
+      background: #000;
     }
   </style>
 </head>
 <body>
-  <!-- Container for Cesium -->
+  <!-- Cesium Container -->
   <div id="cesiumContainer"></div>
 
   <!-- Cesium JS -->
   <script src="https://cesium.com/downloads/cesiumjs/releases/1.100/Build/Cesium/Cesium.js" crossorigin=""></script>
   <script>
-    // IMPORTANT: Replace 'YOUR_BING_API_KEY' with your actual Bing Maps API key.
-    const bingAerial = new Cesium.BingMapsImageryProvider({
-      url: 'https://dev.virtualearth.net',
-      key: 'YOUR_BING_API_KEY',
-      mapStyle: Cesium.BingMapsStyle.AERIAL
-    });
+    // Set your Cesium Ion token.
+    Cesium.Ion.defaultAccessToken = 'YOUeyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJkOTY2Y2IwNy0zYjU4LTQ1N2QtYTE4MS04MDVkMWQ2ZDNjZTEiLCJpZCI6Mjk0MzMxLCJpYXQiOjE3NDQ3Mjc1Nzl9.NNQjuRvau6M-3KNZ-OCux075VBT4nPBdLVMRuen4KMYR_CESIUM_ION_TOKEN';
 
-    // Initialize the Cesium Viewer using Bing Maps Aerial imagery.
+    // Use the IonImageryProvider with assetId 2 for Bing Maps Aerial imagery.
+    const imageryProvider = new Cesium.IonImageryProvider({ assetId: 2 });
+
+    // Initialize the Cesium Viewer.
     const viewer = new Cesium.Viewer('cesiumContainer', {
-      imageryProvider: bingAerial,
-      baseLayerPicker: false, // Prevent users from changing the imagery provider
-      terrainProvider: new Cesium.EllipsoidTerrainProvider()  // Use the default WGS84 ellipsoid
+      imageryProvider: imageryProvider,
+      baseLayerPicker: false,  // Remove UI for changing imagery layers
+      terrainProvider: new Cesium.EllipsoidTerrainProvider()  // Use a simple WGS84 ellipsoid (no 3D terrain)
     });
 
-    // Fly to an initial view over a broad region.
+    // Set an initial view.
     viewer.camera.flyTo({
       destination: Cesium.Cartesian3.fromDegrees(-95, 40, 2500000)
     });
 
-    // Set up a double-click handler to prompt for a title and description.
+    // Set up a double-click handler that prompts the user for a title and description, then adds a pin.
     const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
     handler.setInputAction((movement) => {
-      // Get the position on the ellipsoid corresponding to the double click.
+      // Get the clicked position on the ellipsoid.
       const pickedPosition = viewer.camera.pickEllipsoid(movement.position);
       if (Cesium.defined(pickedPosition)) {
-        // Convert Cartesian position to Cartographic (to get latitude & longitude).
+        // Convert Cartesian to geographic coordinates.
         const cartographic = Cesium.Cartographic.fromCartesian(pickedPosition);
         const lat = Cesium.Math.toDegrees(cartographic.latitude);
         const lon = Cesium.Math.toDegrees(cartographic.longitude);
 
-        // Prompt the user for a title and description.
-        const title = prompt("Enter a title for this pin:");
-        if (!title) return; // Cancel if no title is provided.
-        const description = prompt("Enter a description for this pin:");
+        // Prompt for title (required) and description.
+        const title = prompt("Enter a title for the pin:");
+        if (!title) return; // Do nothing if canceled.
+        const description = prompt("Enter a description for the pin:");
 
-        // Add a pin (billboard with a label) at the clicked location.
+        // Add a pin (billboard with label) at the specified location.
         viewer.entities.add({
           position: Cesium.Cartesian3.fromDegrees(lon, lat),
           billboard: {
-            image: 'https://cdn-icons-png.flaticon.com/512/1673/1673221.png', // Example pin icon URL
-            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-            scale: 0.5
+            image: 'https://cdn-icons-png.flaticon.com/512/1673/1673221.png', // Example pin icon URL.
+            scale: 0.5,
+            verticalOrigin: Cesium.VerticalOrigin.BOTTOM
           },
           label: {
             text: title,
@@ -81,15 +79,15 @@
             fillColor: Cesium.Color.WHITE,
             outlineColor: Cesium.Color.BLACK,
             outlineWidth: 2,
-            style: Cesium.LabelStyle.FILL_AND_OUTLINE,
             verticalOrigin: Cesium.VerticalOrigin.TOP,
             pixelOffset: new Cesium.Cartesian2(0, -30)
           },
-          description: description  // This shows in the InfoBox if the entity is selected.
+          description: description // Appears in the InfoBox when the entity is selected.
         });
       }
     }, Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
   </script>
 </body>
 </html>
+
 
