@@ -2,62 +2,260 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Cesium with Access Token</title>
+  <title>Cesium Demonstration Page</title>
   <!-- Cesium CSS -->
-  <link 
-    rel="stylesheet" 
+  <link
+    rel="stylesheet"
     href="https://cesium.com/downloads/cesiumjs/releases/1.100/Build/Cesium/Widgets/widgets.css"
   />
   <style>
+    /* Ensure the page takes up full viewport */
     html, body {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
+      overflow: hidden;
+      font-family: sans-serif;
     }
+    /* Container that holds the Cesium globe */
     #cesiumContainer {
       width: 100%;
       height: 100%;
       display: block;
     }
+    /* Simple control panel overlay */
+    #controlPanel {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(255,255,255,0.9);
+      padding: 10px;
+      border-radius: 8px;
+      z-index: 100;
+      font-size: 14px;
+    }
+    #controlPanel button {
+      display: block;
+      margin-bottom: 5px;
+      width: 200px;
+      padding: 5px;
+      font-size: 14px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
+  <!-- The Cesium Container -->
   <div id="cesiumContainer"></div>
 
-  <!-- Cesium JS -->
-  <script 
-    src="https://cesium.com/downloads/cesiumjs/releases/1.100/Build/Cesium/Cesium.js"
-    integrity=""
-    crossorigin=""
-  ></script>
+  <!-- Control Panel for Demonstrations -->
+  <div id="controlPanel">
+    <button id="btnAddBillboard">Add Billboard Example</button>
+    <button id="btnAddModel">Add 3D Model Example</button>
+    <button id="btnToggleMoving">Toggle Moving Entity</button>
+    <button id="btnToggleDistance">Toggle Distance Measurement</button>
+    <div id="measurementResult" style="margin-top:10px; color: #333;"></div>
+  </div>
 
+  <!-- Cesium JS -->
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.100/Build/Cesium/Cesium.js" crossorigin=""></script>
   <script>
     // Set your Cesium Ion access token here:
-    Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI1ODgwZDk4YS1kNmM2LTQyMmUtYmU4MS00OWUyOTgxYjg3MWMiLCJpZCI6Mjk0MzMxLCJpYXQiOjE3NDQ3MjY5MDN9.GiksKrwslZbSBi62HqVdBBrPQKvSQwF5TT5KmmUPMRQ';
+    Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJkOTY2Y2IwNy0zYjU4LTQ1N2QtYTE4MS04MDVkMWQ2ZDNjZTEiLCJpZCI6Mjk0MzMxLCJpYXQiOjE3NDQ3Mjc1Nzl9.NNQjuRvau6M-3KNZ-OCux075VBT4nPBdLVMRuen4KMY';
 
-    // Use Natural Earth II as the imagery provider
-    const naturalEarthProvider = new Cesium.TileMapServiceImageryProvider({
-      url: Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII")
-    });
-
-    // Use WGS84 Ellipsoid for terrain (i.e., no detailed 3D terrain)
-    const ellipsoidTerrain = new Cesium.EllipsoidTerrainProvider();
-
-    // Create the Cesium Viewer
+    // Create a viewer using Natural Earth II imagery and WGS84 Ellipsoid terrain
     const viewer = new Cesium.Viewer('cesiumContainer', {
-      imageryProvider: naturalEarthProvider,
-      terrainProvider: ellipsoidTerrain,
-      baseLayerPicker: true,  // Show the layer picker so you can try different options
+      imageryProvider: new Cesium.TileMapServiceImageryProvider({
+        url: Cesium.buildModuleUrl('Assets/Textures/NaturalEarthII')
+      }),
+      terrainProvider: new Cesium.EllipsoidTerrainProvider(),
+      baseLayerPicker: true,   // Let the user pick layers if desired
       animation: false,
       timeline: false
     });
 
-    // Fly the camera to an initial position (example coordinates)
+    // Fly to an initial location
     viewer.camera.flyTo({
       destination: Cesium.Cartesian3.fromDegrees(-75.59777, 40.03883, 1500000)
     });
+
+    // -------------------------------
+    // Demonstration: Billboard Example
+    // -------------------------------
+    let billboardEntity = null;
+    document.getElementById('btnAddBillboard').addEventListener('click', () => {
+      if (!billboardEntity) {
+        billboardEntity = viewer.entities.add({
+          name: "Billboard Example",
+          position: Cesium.Cartesian3.fromDegrees(-75.163789, 39.952335),
+          billboard: {
+            image: 'https://cdn-icons-png.flaticon.com/512/1673/1673221.png', // sample icon
+            scale: 0.5
+          },
+          label: {
+            text: 'Philadelphia',
+            font: '14pt sans-serif',
+            fillColor: Cesium.Color.WHITE,
+            outlineColor: Cesium.Color.BLACK,
+            outlineWidth: 2,
+            style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+            verticalOrigin: Cesium.VerticalOrigin.BOTTOM
+          }
+        });
+      } else {
+        viewer.entities.remove(billboardEntity);
+        billboardEntity = null;
+      }
+    });
+
+    // -------------------------------
+    // Demonstration: 3D Model Example
+    // -------------------------------
+    // Note: This uses a sample model URL from Cesium Air.
+    let modelEntity = null;
+    document.getElementById('btnAddModel').addEventListener('click', () => {
+      if (!modelEntity) {
+        modelEntity = viewer.entities.add({
+          name: "3D Model Example",
+          position: Cesium.Cartesian3.fromDegrees(-75.62898254394531, 40.02804946899414, 0),
+          model: {
+            uri: 'https://cesium.com/downloads/cesiumjs/releases/1.100/Apps/Sandcastle/gallery/CesiumAir/Cesium_Air.glb',
+            minimumPixelSize: 128,
+            maximumScale: 200
+          }
+        });
+        // Fly to the model
+        viewer.zoomTo(modelEntity);
+      } else {
+        viewer.entities.remove(modelEntity);
+        modelEntity = null;
+      }
+    });
+
+    // -------------------------------
+    // Demonstration: Moving Entity Example
+    // -------------------------------
+    let movingEntity = null;
+    let movingEntityAdded = false;
+    let movingStartTime = viewer.clock.currentTime;
+    document.getElementById('btnToggleMoving').addEventListener('click', () => {
+      if (!movingEntityAdded) {
+        // Define a center point for the movement
+        const center = Cesium.Cartesian3.fromDegrees(-75.59777, 40.03883, 0);
+        const radius = 500000.0;
+        movingEntity = viewer.entities.add({
+          name: "Moving Entity",
+          position: new Cesium.CallbackProperty(function(time, result) {
+            // Calculate an angle based on seconds passed
+            const seconds = Cesium.JulianDate.secondsDifference(time, movingStartTime);
+            const angle = Cesium.Math.toRadians(seconds * 10); // speed factor
+            // Convert center to cartesian coordinates, then modify x & y for a simple circular orbit
+            const cartographic = Cesium.Cartographic.fromCartesian(center);
+            const currentLng = cartographic.longitude + (angle / 10);
+            const currentLat = cartographic.latitude; // constant latitude for simplicity
+            return Cesium.Cartesian3.fromDegrees(
+              Cesium.Math.toDegrees(currentLng),
+              Cesium.Math.toDegrees(currentLat),
+              100000 // altitude
+            );
+          }, false),
+          point: {
+            pixelSize: 12,
+            color: Cesium.Color.RED
+          }
+        });
+        movingEntityAdded = true;
+      } else {
+        viewer.entities.remove(movingEntity);
+        movingEntityAdded = false;
+      }
+    });
+
+    // -------------------------------
+    // Demonstration: Distance Measurement Mode
+    // -------------------------------
+    let measurementMode = false;
+    let measureStartPoint = null;
+    let measureEndPoint = null;
+    let measureLabel = null;
+
+    document.getElementById('btnToggleDistance').addEventListener('click', () => {
+      measurementMode = !measurementMode;
+      // Reset previous measurement state
+      if (measurementMode === false) {
+        measureStartPoint = null;
+        measureEndPoint = null;
+        if (measureLabel) {
+          viewer.entities.remove(measureLabel);
+          measureLabel = null;
+        }
+        document.getElementById('measurementResult').innerHTML = '';
+      } else {
+        alert("Distance Measurement Mode Enabled:\nClick two points on the globe.");
+      }
+    });
+
+    // Handle click events for measurement mode
+    const measurementHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+    measurementHandler.setInputAction(function(click) {
+      if (!measurementMode) return;
+      const pickedPosition = viewer.camera.pickEllipsoid(click.position);
+      if (Cesium.defined(pickedPosition)) {
+        if (!measureStartPoint) {
+          measureStartPoint = pickedPosition;
+          // Optionally, add a marker for the first point.
+          viewer.entities.add({
+            position: measureStartPoint,
+            point: { pixelSize: 8, color: Cesium.Color.YELLOW }
+          });
+        } else {
+          measureEndPoint = pickedPosition;
+          // Calculate geodesic distance:
+          const cartoStart = Cesium.Cartographic.fromCartesian(measureStartPoint);
+          const cartoEnd = Cesium.Cartographic.fromCartesian(measureEndPoint);
+          const geodesic = new Cesium.EllipsoidGeodesic(cartoStart, cartoEnd);
+          const distance = geodesic.surfaceDistance;
+          
+          // Display the result
+          document.getElementById('measurementResult').innerHTML = 'Distance: ' + (distance/1000).toFixed(2) + ' km';
+          
+          // Optionally, add a label to the globe at the midpoint:
+          const midpointCartesian = Cesium.Cartesian3.midpoint(measureStartPoint, measureEndPoint, new Cesium.Cartesian3());
+          if (measureLabel) viewer.entities.remove(measureLabel);
+          measureLabel = viewer.entities.add({
+            position: midpointCartesian,
+            label: {
+              text: (distance/1000).toFixed(2) + ' km',
+              font: '14pt sans-serif',
+              fillColor: Cesium.Color.WHITE,
+              outlineColor: Cesium.Color.BLACK,
+              outlineWidth: 2,
+              style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+              verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+              pixelOffset: new Cesium.Cartesian2(0, -20)
+            }
+          });
+          // Reset points for a new measurement.
+          measureStartPoint = null;
+          measureEndPoint = null;
+          measurementMode = false;
+        }
+      }
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+    // -------------------------------
+    // General Picking Example
+    // -------------------------------
+    // When not in measurement mode, log entity picks to the console
+    const pickHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+    pickHandler.setInputAction(function(click) {
+      if (measurementMode) return;  // Let measurement mode handle clicks
+      const pickedObject = viewer.scene.pick(click.position);
+      if (Cesium.defined(pickedObject) && Cesium.defined(pickedObject.id)) {
+        console.log('Picked entity:', pickedObject.id.name);
+      }
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
   </script>
 </body>
 </html>
-
