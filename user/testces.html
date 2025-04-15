@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Cesium Default: Natural Earth & WGS84</title>
+  <title>Cesium with Access Token</title>
   <!-- Cesium CSS -->
-  <link
-    rel="stylesheet"
+  <link 
+    rel="stylesheet" 
     href="https://cesium.com/downloads/cesiumjs/releases/1.100/Build/Cesium/Widgets/widgets.css"
   />
   <style>
@@ -23,40 +23,41 @@
   </style>
 </head>
 <body>
+  <div id="cesiumContainer"></div>
 
-<div id="cesiumContainer"></div>
+  <!-- Cesium JS -->
+  <script 
+    src="https://cesium.com/downloads/cesiumjs/releases/1.100/Build/Cesium/Cesium.js"
+    integrity=""
+    crossorigin=""
+  ></script>
 
-<!-- Cesium JS -->
-<script
-  src="https://cesium.com/downloads/cesiumjs/releases/1.100/Build/Cesium/Cesium.js"
-  integrity=""
-  crossorigin=""
-></script>
+  <script>
+    // Set your Cesium Ion access token here:
+    Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI1ODgwZDk4YS1kNmM2LTQyMmUtYmU4MS00OWUyOTgxYjg3MWMiLCJpZCI6Mjk0MzMxLCJpYXQiOjE3NDQ3MjY5MDN9.GiksKrwslZbSBi62HqVdBBrPQKvSQwF5TT5KmmUPMRQ';
 
-<script>
-  // Provide the Natural Earth II imagery provider
-  const naturalEarthProvider = new Cesium.TileMapServiceImageryProvider({
-    // This path is included in the standard Cesium build
-    url: Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII")
-  });
+    // Use Natural Earth II as the imagery provider
+    const naturalEarthProvider = new Cesium.TileMapServiceImageryProvider({
+      url: Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII")
+    });
 
-  // Provide a WGS84 Ellipsoid terrain (i.e. no 3D terrain)
-  const ellipsoidTerrain = new Cesium.EllipsoidTerrainProvider();
+    // Use WGS84 Ellipsoid for terrain (i.e., no detailed 3D terrain)
+    const ellipsoidTerrain = new Cesium.EllipsoidTerrainProvider();
 
-  // Initialize the Viewer with those defaults
-  const viewer = new Cesium.Viewer("cesiumContainer", {
-    imageryProvider: naturalEarthProvider,
-    terrainProvider: ellipsoidTerrain,
-    baseLayerPicker: true,  // Keep the layer/terrain picker visible
-    animation: false,
-    timeline: false
-  });
+    // Create the Cesium Viewer
+    const viewer = new Cesium.Viewer('cesiumContainer', {
+      imageryProvider: naturalEarthProvider,
+      terrainProvider: ellipsoidTerrain,
+      baseLayerPicker: true,  // Show the layer picker so you can try different options
+      animation: false,
+      timeline: false
+    });
 
-  // Fly somewhere to confirm it’s working.
-  viewer.camera.flyTo({
-    destination: Cesium.Cartesian3.fromDegrees(-75.59777, 40.03883, 1500000)
-  });
-</script>
-
+    // Fly the camera to an initial position (example coordinates)
+    viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(-75.59777, 40.03883, 1500000)
+    });
+  </script>
 </body>
 </html>
+
