@@ -349,7 +349,7 @@
     let editingPinId = null;
     let editingPinType = null;
 
-    // Initialize Cesium Viewer
+    // Initialize Cesium Viewer with your Ion access token
     Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI1ODgwZDk4YS1kNmM2LTQyMmUtYmU4MS00OWUyOTgxYjg3MWMiLCJpZCI6Mjk0MzMxLCJpYXQiOjE3NDQ3MjY5MDN9.GiksKrwslZbSBi62HqVdBBrPQKvSQwF5TT5KmmUPMRQ';
     const bingAerialProvider = new Cesium.IonImageryProvider({ assetId: 2 });
     const ellipsoidTerrain = new Cesium.EllipsoidTerrainProvider();
@@ -363,6 +363,19 @@
     viewer.camera.flyTo({
       destination: Cesium.Cartesian3.fromDegrees(-95, 40, 2500000)
     });
+
+    // Inject custom CSS into the default InfoBox's iframe when it loads
+    if (viewer.infoBox && viewer.infoBox.frame) {
+      viewer.infoBox.frame.onload = function() {
+        const doc = viewer.infoBox.frame.contentDocument || viewer.infoBox.frame.contentWindow.document;
+        const styleEl = doc.createElement('style');
+        styleEl.innerHTML = `
+          body { background-color: #111 !important; color: #00ffff !important; font-family: 'Orbitron', sans-serif; }
+          .cesium-infoBox { border: 2px solid #00ffff !important; border-radius: 10px !important; padding: 10px !important; box-shadow: 0 0 10px #00ffff !important; }
+        `;
+        doc.head.appendChild(styleEl);
+      };
+    }
 
     // Initialize Bootstrap modal
     const pinModalEl = document.getElementById("pinModal");
@@ -464,7 +477,7 @@
         position: Cesium.Cartesian3.fromDegrees(lon, lat),
         billboard: {
           image: 'https://cdn-icons-png.flaticon.com/512/1673/1673221.png',
-          scale: 0.5,
+          scale: 0.3,
           verticalOrigin: Cesium.VerticalOrigin.BOTTOM
         },
         label: {
@@ -755,6 +768,7 @@
   </script>
 </body>
 </html>
+
 
 
 
