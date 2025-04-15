@@ -21,32 +21,30 @@
       padding: 0;
       width: 100%;
       height: 100%;
-      overflow: hidden;
+      /* Removed overflow: hidden so we can see if there's any issue with the container. */
       font-family: 'Orbitron', sans-serif;
       color: #00ffff; /* neon cyan as base text color */
     }
-    /* Video Background */
+
+    /* 
+    // Video Background REMOVED
     #bgvideo {
-      position: fixed;
-      top: 0;
-      left: 0;
-      min-width: 100%;
-      min-height: 100%;
-      z-index: -2;
-      object-fit: cover;
-      opacity: 1; /* video fully visible */
+      display: none; // or remove entirely
     }
+    */
+
     /* The Globe Container (Cesium) */
     #earth_div {
-      position: fixed;
+      position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
+      /* Ensure no opaque background hinders the globe */
+      background: transparent;
       z-index: 0;
-      /* The Cesium widget itself has its own background color.
-         If you want transparent background behind the globe, you'll need extra tricking. */
     }
+
     /* Offcanvas Toggle (Hamburger) */
     #offcanvasToggle {
       position: fixed;
@@ -110,7 +108,7 @@
       padding: 1em;
       border-radius: 10px;
     }
-    /* Popup styling for pins (Cesium's InfoBox uses an iframe approach; we can style within .cesium-infoBox if needed) */
+    /* Popup styling for pins */
     .pin-popup-content {
       background: rgba(0, 31, 63, 0.9);
       border: 1px solid #00ffff;
@@ -195,19 +193,14 @@
       border: 2px solid #00ffff;
       box-shadow: 0 0 5px #00ffff;
     }
-    /* Adjust Cesium's default InfoBox styling if you like:
-    .cesium-infoBox {
-      background: rgba(0, 0, 0, 0.7)!important;
-      color: #00ffff!important;
-    }
-    */
   </style>
 </head>
 <body>
-  <!-- Background Video -->
+  <!-- REMOVED the background video container
   <video autoplay muted loop id="bgvideo">
     <source src="stars.mp4" type="video/mp4">
   </video>
+  -->
 
   <!-- Cesium Container -->
   <div id="earth_div"></div>
@@ -280,7 +273,6 @@
           <button class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
-
           <div id="modalChoice" class="text-center">
             <p>Select Pin Type:</p>
             <button class="btn btn-outline-primary mb-2" id="modalBtnSimple">Pin Event</button>
@@ -342,7 +334,6 @@
             <button type="submit" class="btn btn-success w-100">Save Shop Item</button>
             <button type="button" class="btn btn-link mt-2" id="backFromShopModal">← Back</button>
           </form>
-
         </div>
       </div>
     </div>
@@ -384,7 +375,7 @@
     let showOnlyMyPins = false;
     const modal = new bootstrap.Modal(document.getElementById("pinModal"));
 
-    let entitiesList = [];  // Replaces markersList
+    let entitiesList = [];
     let editingPinId = null;
     let editingPinType = null;
 
@@ -395,7 +386,7 @@
         return;
       }
       currentUser = user;
-      loadPinsFromFirebase(); // by default, loads all pins
+      loadPinsFromFirebase();
     });
 
     /* ----------------------------------
@@ -411,7 +402,7 @@
 
     // Example: adjusting initial camera view (optional)
     viewer.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(0, 0, 30000000) // "height" (third param) to keep it zoomed out
+      destination: Cesium.Cartesian3.fromDegrees(0, 0, 30000000) 
     });
 
     /* ----------------------------------
@@ -421,7 +412,6 @@
     handler.setInputAction((movement) => {
       const pickedPosition = viewer.camera.pickEllipsoid(movement.position);
       if (pickedPosition) {
-        // Convert to lat/lng
         const cartographic = Cesium.Cartographic.fromCartesian(pickedPosition);
         const lat = Cesium.Math.toDegrees(cartographic.latitude);
         const lng = Cesium.Math.toDegrees(cartographic.longitude);
@@ -430,7 +420,6 @@
           document.getElementById(`modalLat${type}`).value = lat.toFixed(5);
           document.getElementById(`modalLng${type}`).value = lng.toFixed(5);
         });
-        // Indicate new pin creation
         editingPinId = null;
         editingPinType = null;
         modal.show();
@@ -444,7 +433,7 @@
     toggleMyPinsBtn.addEventListener("click", () => {
       showOnlyMyPins = !showOnlyMyPins;
       toggleMyPinsBtn.textContent = showOnlyMyPins ? "Show All Pins" : "Show My Pins Only";
-      loadPinsFromFirebase(); // reload with filter
+      loadPinsFromFirebase();
     });
 
     /* ----------------------------------
@@ -454,7 +443,6 @@
     logoutBtn.addEventListener("click", () => {
       signOut(auth)
         .then(() => {
-          // Signed out successfully
           window.location.href = "../index.html";
         })
         .catch(err => {
@@ -468,27 +456,21 @@
     ---------------------------------- */
     function loadPinsFromFirebase() {
       // Remove existing entities
-      entitiesList.forEach(ent => {
-        viewer.entities.remove(ent);
-      });
+      entitiesList.forEach(ent => viewer.entities.remove(ent));
       entitiesList = [];
 
       const path = showOnlyMyPins ? `pins/${currentUser.uid}` : "pins";
       onValue(ref(db, path), snapshot => {
-        // Remove existing entities again on each update
-        entitiesList.forEach(ent => {
-          viewer.entities.remove(ent);
-        });
+        // Clear out old entities again on each update
+        entitiesList.forEach(ent => viewer.entities.remove(ent));
         entitiesList = [];
 
         const data = snapshot.val();
         if (!data) return;
 
         if (showOnlyMyPins) {
-          // data = { eventPins: {...}, moodPins: {...}, shopPins: {...} }
           loadUserPinTypes(currentUser.uid, data);
         } else {
-          // data = { userId1: {...}, userId2: {...}, ... }
           Object.entries(data).forEach(([userId, userData]) => {
             loadUserPinTypes(userId, userData);
           });
@@ -500,8 +482,6 @@
       ["eventPins", "moodPins", "shopPins"].forEach(pinType => {
         const group = userData[pinType];
         if (!group) return;
-
-        // For each pin
         Object.entries(group).forEach(([pinId, pin]) => {
           if (pin.geolocation) {
             const entity = addPin(
@@ -523,12 +503,10 @@
     ---------------------------------- */
     function generateEmbedContent(link) {
       if (!link) return "";
-      // Spotify
       if (link.includes("open.spotify.com/track/")) {
         const embedUrl = link.replace("open.spotify.com/track/", "open.spotify.com/embed/track/");
         return `<iframe class="pin-iframe" src="${embedUrl}" allow="encrypted-media" allowfullscreen></iframe>`;
       }
-      // YouTube
       if (link.includes("youtube.com/watch?v=") || link.includes("youtu.be/")) {
         let videoId = "";
         if (link.includes("watch?v=")) {
@@ -540,14 +518,12 @@
         const embedUrl = `https://www.youtube.com/embed/${videoId}`;
         return `<iframe class="pin-iframe" src="${embedUrl}" allowfullscreen></iframe>`;
       }
-      // MP4 or MP3
       if (link.endsWith(".mp4")) {
         return `<video class="pin-video" src="${link}" controls></video>`;
       }
       if (link.endsWith(".mp3")) {
         return `<audio class="pin-audio" src="${link}" controls></audio>`;
       }
-      // fallback
       return `<iframe class="pin-iframe" src="${link}" allowfullscreen></iframe>`;
     }
 
@@ -555,7 +531,6 @@
        Create entity (marker) + description
     ---------------------------------- */
     function addPin(lat, lng, pinData, userId, pinId, pinType) {
-      // Build the HTML for the "popup" (Cesium's InfoBox)
       let content = `<div class="pin-popup-content">`;
       content += `
         <strong>Title:</strong> ${pinData.title || "Untitled"}<br>
@@ -567,7 +542,6 @@
       if (pinData.imageUrl) {
         content += `<br><img class="pin-image" src="${pinData.imageUrl}" alt="Pin Image">`;
       }
-      // Likes / Dislikes
       const likesCount = pinData.likes || 0;
       const dislikesCount = pinData.dislikes || 0;
       content += `
@@ -585,7 +559,6 @@
           Dislike (${dislikesCount})
         </button>
       `;
-      // Edit / Delete if owner
       if (userId === currentUser.uid) {
         content += `
           <br>
@@ -605,26 +578,22 @@
       }
       content += `</div>`;
 
-      // Create an entity with a billboard + description
       const entity = viewer.entities.add({
         position: Cesium.Cartesian3.fromDegrees(lng, lat),
         billboard: {
-          image: "https://cdn-icons-png.flaticon.com/512/3177/3177361.png", // Example icon
+          image: "https://cdn-icons-png.flaticon.com/512/3177/3177361.png",
           scale: 0.6
         },
         description: content
       });
-
-      // Optionally store ID or custom properties so you can find it again
       entity.userId = userId;
       entity.pinType = pinType;
       entity.pinId = pinId;
-
       return entity;
     }
 
     /* ----------------------------------
-       Global click listener for Like, Dislike, Edit, Delete
+       Global click listener
     ---------------------------------- */
     document.addEventListener("click", async e => {
       if (e.target.classList.contains("like-button")) {
@@ -831,7 +800,7 @@
     });
 
     /* ----------------------------------
-       Create New Pin Functions
+       Create New Pin
     ---------------------------------- */
     function saveEventPin(lat, lng, title, desc, imageUrl = "", songLink = "") {
       const refPath = ref(db, `pins/${currentUser.uid}/eventPins`);
@@ -901,8 +870,8 @@
       ["modalChoice", "simpleModalForm", "detailedModalForm", "shopModalForm"]
         .forEach(id => document.getElementById(id).classList.add("d-none"));
     }
-
   </script>
 </body>
 </html>
+
 
