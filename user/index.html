@@ -2,18 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Interactive Map with Editable Pins (Cesium Edition)</title>
+  <title>Interactive Map with Editable Pins</title>
   <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <!-- Tron-like font from Google Fonts (Orbitron) -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap">
-
-  <!-- Cesium CSS -->
-  <link
-    rel="stylesheet"
-    href="https://cesium.com/downloads/cesiumjs/releases/1.100/Build/Cesium/Widgets/widgets.css"
-  />
-
   <style>
     /* Global Styles */
     html, body {
@@ -21,30 +14,31 @@
       padding: 0;
       width: 100%;
       height: 100%;
-      /* Removed overflow: hidden so we can see if there's any issue with the container. */
+      overflow: hidden;
+      /* No background color so video remains visible */
       font-family: 'Orbitron', sans-serif;
       color: #00ffff; /* neon cyan as base text color */
     }
-
-    /* 
-    // Video Background REMOVED
+    /* Video Background */
     #bgvideo {
-      display: none; // or remove entirely
+      position: fixed;
+      top: 0;
+      left: 0;
+      min-width: 100%;
+      min-height: 100%;
+      z-index: -2;
+      object-fit: cover;
+      opacity: 1; /* video fully visible */
     }
-    */
-
-    /* The Globe Container (Cesium) */
+    /* Globe / WebGL Earth Container */
     #earth_div {
-      position: absolute;
+      position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      /* Ensure no opaque background hinders the globe */
-      background: transparent;
       z-index: 0;
     }
-
     /* Offcanvas Toggle (Hamburger) */
     #offcanvasToggle {
       position: fixed;
@@ -94,12 +88,15 @@
       color: #00ffff;
       border-bottom: 1px solid rgba(0, 255, 255, 0.2);
     }
+    /* Explicit styling for active nav links */
     .offcanvas .nav-link.active {
+      color: #00ffff;
       background-color: rgba(0, 31, 63, 0.5);
     }
     .offcanvas .nav-link:hover {
       background-color: rgba(0, 31, 63, 0.5);
     }
+    /* Tron-style gradient form (for modals & forms) */
     .blue-gradient-form {
       background: rgba(0, 31, 63, 0.85);
       border: 1px solid #00ffff;
@@ -118,7 +115,7 @@
       border-radius: 10px;
       max-width: 300px;
     }
-    /* Button styles */
+    /* Button styles (overriding some Bootstrap defaults) */
     .btn {
       font-family: 'Orbitron', sans-serif;
       text-transform: uppercase;
@@ -196,13 +193,12 @@
   </style>
 </head>
 <body>
-  <!-- REMOVED the background video container
+  <!-- Background Video -->
   <video autoplay muted loop id="bgvideo">
     <source src="stars.mp4" type="video/mp4">
   </video>
-  -->
 
-  <!-- Cesium Container -->
+  <!-- WebGL Earth Container -->
   <div id="earth_div"></div>
 
   <!-- Custom Hamburger (Offcanvas Toggle) -->
@@ -227,6 +223,7 @@
           <li class="nav-item"><a class="nav-link" href="activity.html">View the Pin</a></li>
           <li class="nav-item"><a class="nav-link" href="shop.html">Store</a></li>
           <li class="nav-item"><a class="nav-link" href="guide.html">Instructions</a></li>
+          <li class="nav-item"><a class="nav-link" href="testces.html">Test New Globe</a></li>
         </ul>
       </nav>
 
@@ -273,6 +270,7 @@
           <button class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
+
           <div id="modalChoice" class="text-center">
             <p>Select Pin Type:</p>
             <button class="btn btn-outline-primary mb-2" id="modalBtnSimple">Pin Event</button>
@@ -334,20 +332,15 @@
             <button type="submit" class="btn btn-success w-100">Save Shop Item</button>
             <button type="button" class="btn btn-link mt-2" id="backFromShopModal">← Back</button>
           </form>
+
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Bootstrap JS -->
+  <!-- WebGL Earth & Bootstrap JS -->
+  <script src="https://www.webglearth.com/v2/api.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-
-  <!-- Cesium JS -->
-  <script
-    src="https://cesium.com/downloads/cesiumjs/releases/1.100/Build/Cesium/Cesium.js"
-    integrity=""
-    crossorigin=""
-  ></script>
 
   <!-- Firebase v10+ -->
   <script type="module">
@@ -375,7 +368,7 @@
     let showOnlyMyPins = false;
     const modal = new bootstrap.Modal(document.getElementById("pinModal"));
 
-    let entitiesList = [];
+    let markersList = [];
     let editingPinId = null;
     let editingPinType = null;
 
@@ -386,63 +379,58 @@
         return;
       }
       currentUser = user;
-      loadPinsFromFirebase();
+      loadPinsFromFirebase(); // by default, loads all pins
     });
 
-    /* ----------------------------------
-       Initialize Cesium Viewer
-    ---------------------------------- */
-    const viewer = new Cesium.Viewer("earth_div", {
-      terrainProvider: Cesium.createWorldTerrain(),
-      animation: false,
-      timeline: false,
-      baseLayerPicker: false
+    // Create the globe
+    const earth = new WE.map("earth_div");
+    earth.setView([0, 0], 2);
+    WE.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors",
+      subdomains: "abc"
+    }).addTo(earth);
+
+    // Double-click detection
+    let lastClickTime = 0;
+    const clickThreshold = 350; // ms
+
+    earth.on("click", event => {
+      const now = Date.now();
+      if (now - lastClickTime < clickThreshold) {
+        // It's a double-click
+        handleDoubleClick(event);
+      }
+      lastClickTime = now;
     });
-    viewer.scene.globe.depthTestAgainstTerrain = true;
 
-    // Example: adjusting initial camera view (optional)
-    viewer.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(0, 0, 30000000) 
-    });
-
-    /* ----------------------------------
-       Double-click to create a new pin
-    ---------------------------------- */
-    const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-    handler.setInputAction((movement) => {
-      const pickedPosition = viewer.camera.pickEllipsoid(movement.position);
-      if (pickedPosition) {
-        const cartographic = Cesium.Cartographic.fromCartesian(pickedPosition);
-        const lat = Cesium.Math.toDegrees(cartographic.latitude);
-        const lng = Cesium.Math.toDegrees(cartographic.longitude);
-
+    function handleDoubleClick(event) {
+      if (event.latlng) {
+        const { lat, lng } = event.latlng;
         ["Simple", "Det", "Shop"].forEach(type => {
           document.getElementById(`modalLat${type}`).value = lat.toFixed(5);
           document.getElementById(`modalLng${type}`).value = lng.toFixed(5);
         });
+        // Indicate new pin creation
         editingPinId = null;
         editingPinType = null;
         modal.show();
       }
-    }, Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+    }
 
-    /* ----------------------------------
-       Filter button
-    ---------------------------------- */
+    // Filter button
     const toggleMyPinsBtn = document.getElementById("toggleMyPinsBtn");
     toggleMyPinsBtn.addEventListener("click", () => {
       showOnlyMyPins = !showOnlyMyPins;
       toggleMyPinsBtn.textContent = showOnlyMyPins ? "Show All Pins" : "Show My Pins Only";
-      loadPinsFromFirebase();
+      loadPinsFromFirebase(); // reload with filter
     });
 
-    /* ----------------------------------
-       Logout button
-    ---------------------------------- */
+    // Logout button
     const logoutBtn = document.getElementById("logoutBtn");
     logoutBtn.addEventListener("click", () => {
       signOut(auth)
         .then(() => {
+          // Signed out successfully
           window.location.href = "../index.html";
         })
         .catch(err => {
@@ -451,26 +439,28 @@
         });
     });
 
-    /* ----------------------------------
+    /* ------------------------------------------------------------------
        Load existing pins from Firebase
-    ---------------------------------- */
+    ------------------------------------------------------------------ */
     function loadPinsFromFirebase() {
-      // Remove existing entities
-      entitiesList.forEach(ent => viewer.entities.remove(ent));
-      entitiesList = [];
+      // Remove existing markers
+      markersList.forEach(m => m.removeFrom(earth));
+      markersList = [];
 
       const path = showOnlyMyPins ? `pins/${currentUser.uid}` : "pins";
       onValue(ref(db, path), snapshot => {
-        // Clear out old entities again on each update
-        entitiesList.forEach(ent => viewer.entities.remove(ent));
-        entitiesList = [];
+        // Clear out old markers again on each update
+        markersList.forEach(m => m.removeFrom(earth));
+        markersList = [];
 
         const data = snapshot.val();
         if (!data) return;
 
         if (showOnlyMyPins) {
+          // data = { eventPins: {...}, moodPins: {...}, shopPins: {...} }
           loadUserPinTypes(currentUser.uid, data);
         } else {
+          // data = { userId1: {...}, userId2: {...}, ... }
           Object.entries(data).forEach(([userId, userData]) => {
             loadUserPinTypes(userId, userData);
           });
@@ -482,9 +472,11 @@
       ["eventPins", "moodPins", "shopPins"].forEach(pinType => {
         const group = userData[pinType];
         if (!group) return;
+
+        // For each pin
         Object.entries(group).forEach(([pinId, pin]) => {
           if (pin.geolocation) {
-            const entity = addPin(
+            const marker = addPin(
               pin.geolocation.lat,
               pin.geolocation.lng,
               pin,
@@ -492,21 +484,23 @@
               pinId,
               pinType
             );
-            entitiesList.push(entity);
+            markersList.push(marker);
           }
         });
       });
     }
 
-    /* ----------------------------------
-       Convert user link to embed snippet
-    ---------------------------------- */
+    /* ------------------------------------------------------------------
+       Convert user link to an embeddable snippet
+    ------------------------------------------------------------------ */
     function generateEmbedContent(link) {
       if (!link) return "";
+      // Spotify
       if (link.includes("open.spotify.com/track/")) {
         const embedUrl = link.replace("open.spotify.com/track/", "open.spotify.com/embed/track/");
         return `<iframe class="pin-iframe" src="${embedUrl}" allow="encrypted-media" allowfullscreen></iframe>`;
       }
+      // YouTube
       if (link.includes("youtube.com/watch?v=") || link.includes("youtu.be/")) {
         let videoId = "";
         if (link.includes("watch?v=")) {
@@ -518,30 +512,42 @@
         const embedUrl = `https://www.youtube.com/embed/${videoId}`;
         return `<iframe class="pin-iframe" src="${embedUrl}" allowfullscreen></iframe>`;
       }
+      // MP4 or MP3
       if (link.endsWith(".mp4")) {
         return `<video class="pin-video" src="${link}" controls></video>`;
       }
       if (link.endsWith(".mp3")) {
         return `<audio class="pin-audio" src="${link}" controls></audio>`;
       }
+      // fallback
       return `<iframe class="pin-iframe" src="${link}" allowfullscreen></iframe>`;
     }
 
-    /* ----------------------------------
-       Create entity (marker) + description
-    ---------------------------------- */
+    /* ------------------------------------------------------------------
+       Create a marker + popup (including Edit/Delete if user is owner)
+    ------------------------------------------------------------------ */
     function addPin(lat, lng, pinData, userId, pinId, pinType) {
+      const marker = WE.marker([lat, lng]).addTo(earth);
+
       let content = `<div class="pin-popup-content">`;
+
+      // Title/description
       content += `
         <strong>Title:</strong> ${pinData.title || "Untitled"}<br>
         <strong>Description:</strong> ${pinData.description || ""}
       `;
+
+      // If there's a link
       if (pinData.songLink) {
         content += "<br>" + generateEmbedContent(pinData.songLink);
       }
+
+      // If there's an image
       if (pinData.imageUrl) {
         content += `<br><img class="pin-image" src="${pinData.imageUrl}" alt="Pin Image">`;
       }
+
+      // Likes / Dislikes (buttons still here for owners)
       const likesCount = pinData.likes || 0;
       const dislikesCount = pinData.dislikes || 0;
       content += `
@@ -552,6 +558,7 @@
                 data-pin-id="${pinId}">
           Like (${likesCount})
         </button>
+
         <button class="dislike-button btn btn-outline-light btn-sm"
                 data-user-id="${userId}"
                 data-pin-type="${pinType}"
@@ -559,6 +566,8 @@
           Dislike (${dislikesCount})
         </button>
       `;
+
+      // If current user is the owner => show Edit & Delete
       if (userId === currentUser.uid) {
         content += `
           <br>
@@ -576,25 +585,16 @@
           </button>
         `;
       }
+
       content += `</div>`;
 
-      const entity = viewer.entities.add({
-        position: Cesium.Cartesian3.fromDegrees(lng, lat),
-        billboard: {
-          image: "https://cdn-icons-png.flaticon.com/512/3177/3177361.png",
-          scale: 0.6
-        },
-        description: content
-      });
-      entity.userId = userId;
-      entity.pinType = pinType;
-      entity.pinId = pinId;
-      return entity;
+      marker.bindPopup(content);
+      return marker;
     }
 
-    /* ----------------------------------
-       Global click listener
-    ---------------------------------- */
+    /* ------------------------------------------------------------------
+       Global click listener for Like, Dislike, Edit, Delete
+    ------------------------------------------------------------------ */
     document.addEventListener("click", async e => {
       if (e.target.classList.contains("like-button")) {
         const { userId, pinType, pinId } = getPinIdentifiers(e.target);
@@ -638,15 +638,18 @@
       }
     }
 
+    /* ------------------------------------------------------------------
+       Delete Pin
+    ------------------------------------------------------------------ */
     async function deletePin(userId, pinType, pinId) {
       const pinRef = ref(db, `pins/${userId}/${pinType}/${pinId}`);
       await remove(pinRef);
       loadPinsFromFirebase();
     }
 
-    /* ----------------------------------
+    /* ------------------------------------------------------------------
        Edit Pin
-    ---------------------------------- */
+    ------------------------------------------------------------------ */
     async function editPin(userId, pinType, pinId) {
       const pinRef = ref(db, `pins/${userId}/${pinType}/${pinId}`);
       const snapshot = await get(pinRef);
@@ -665,7 +668,8 @@
         eventImageUrl = pinData.imageUrl || "";
         hideForms();
         document.getElementById("simpleModalForm").classList.remove("d-none");
-      } else if (pinType === "moodPins") {
+      }
+      else if (pinType === "moodPins") {
         document.getElementById("modalTitleDet").value = pinData.title || "";
         document.getElementById("modalDescDet").value = pinData.description || "";
         document.getElementById("modalSongDet").value = pinData.songLink || "";
@@ -673,7 +677,8 @@
         document.getElementById("modalLngDet").value = pinData.geolocation.lng;
         hideForms();
         document.getElementById("detailedModalForm").classList.remove("d-none");
-      } else if (pinType === "shopPins") {
+      }
+      else if (pinType === "shopPins") {
         document.getElementById("modalTitleShop").value = pinData.title || "";
         document.getElementById("modalDescShop").value = pinData.description || "";
         document.getElementById("modalNumberShop").value = pinData.quantity || "";
@@ -693,9 +698,9 @@
       return update(pinRef, updatedData);
     }
 
-    /* ----------------------------------
+    /* ------------------------------------------------------------------
        Cloudinary Upload Handlers
-    ---------------------------------- */
+    ------------------------------------------------------------------ */
     function openCloudinary(callback) {
       cloudinary.createUploadWidget({
         cloudName: "djhoct1eh",
@@ -721,9 +726,9 @@
       });
     });
 
-    /* ----------------------------------
+    /* ------------------------------------------------------------------
        Form Submissions for Each Pin Type
-    ---------------------------------- */
+    ------------------------------------------------------------------ */
     document.getElementById("simpleModalForm").addEventListener("submit", async e => {
       e.preventDefault();
       const lat = parseFloat(document.getElementById("modalLatSimple").value);
@@ -799,9 +804,9 @@
       modal.hide();
     });
 
-    /* ----------------------------------
-       Create New Pin
-    ---------------------------------- */
+    /* ------------------------------------------------------------------
+       Create New Pin Functions (include likes=0, dislikes=0)
+    ------------------------------------------------------------------ */
     function saveEventPin(lat, lng, title, desc, imageUrl = "", songLink = "") {
       const refPath = ref(db, `pins/${currentUser.uid}/eventPins`);
       return set(push(refPath), {
@@ -844,9 +849,9 @@
       });
     }
 
-    /* ----------------------------------
+    /* ------------------------------------------------------------------
        Modal Navigation
-    ---------------------------------- */
+    ------------------------------------------------------------------ */
     document.getElementById("modalBtnSimple").onclick = () => {
       hideForms();
       document.getElementById("simpleModalForm").classList.remove("d-none");
@@ -873,5 +878,3 @@
   </script>
 </body>
 </html>
-
-
