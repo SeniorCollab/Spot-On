@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Merged Pins - Spot On</title>
+
+  <!-- Orbitron Font & Bootstrap CSS -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    /* Global Tron-inspired Styles */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      overflow-x: hidden;
+      font-family: 'Orbitron', sans-serif;
+      color: #00ffff; /* Neon cyan text */
+      background-color: #000; /* Dark background */
+    }
+
+    /* Horizontal Icon Navigation Bar */
+    .icon-nav {
+      display: flex;
+      overflow-x: auto;
+      background-color: rgba(0, 31, 63, 0.85);
+      box-shadow: 0 0 10px #00ffff;
+      border-bottom: 1px solid #00ffff;
+      padding: 0.5rem 1rem;
+      gap: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    .icon-nav button {
+      background: none;
+      border: 1px solid #00ffff;
+      color: #00ffff;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      flex-shrink: 0;
+      text-transform: uppercase;
+      font-size: 0.9rem;
+    }
+    .icon-nav button.active {
+      background-color: rgba(0, 255, 255, 0.2);
+    }
+    .icon-nav button:hover {
+      background-color: rgba(0, 255, 255, 0.1);
+    }
+
+    /* Offcanvas Toggle (Hamburger) */
+    #offcanvasToggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1200;
+      background: none;
+      border: none;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .hamburger-icon {
+      width: 30px;
+      height: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .hamburger-icon span {
+      display: block;
+      height: 4px;
+      width: 100%;
+      background-color: #00ffff;
+      border-radius: 2px;
+      box-shadow: 0 0 5px #00ffff;
+    }
+    /* Offcanvas */
+    .offcanvas {
+      background-color: rgba(0, 0, 0, 0.95);
+      border-left: 2px solid #00ffff;
+    }
+    .offcanvas-header,
+    .offcanvas-body,
+    .offcanvas-title {
+      color: #00ffff;
+    }
+    .offcanvas .nav-link {
+      color: #00ffff;
+      border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+      padding: 0.75rem 1rem;
+    }
+    .offcanvas .nav-link:hover,
+    .offcanvas .nav-link.active {
+      background-color: rgba(0, 31, 63, 0.5);
+    }
+
+    /* Section Container */
+    .section-container {
+      display: none; /* Only show the active section */
+      padding: 1rem;
+    }
+    .section-container.active {
+      display: block;
+    }
+
+    /* Page Header */
+    .page-header {
+      background: rgba(0, 31, 63, 0.85);
+      border: 1px solid #00ffff;
+      box-shadow: 0 0 10px #00ffff;
+      color: #00ffff;
+      padding: 1.5rem;
+      border-radius: 0.5rem;
+      margin: 1rem 0;
+      text-align: center;
+    }
+    .page-header h2 {
+      font-size: 2rem;
+      margin: 0;
+      text-shadow: 0 0 5px #00ffff;
+    }
+
+    /* Pin Card Styles */
+    .pin-card {
+      background: rgba(0, 31, 63, 0.85);
+      border: 1px solid #00ffff;
+      box-shadow: 0 0 10px #00ffff;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      transition: transform 0.2s, box-shadow 0.2s;
+      /* Force cards to be square. Adjust if needed. */
+      aspect-ratio: 1 / 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .pin-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 15px #00ffff;
+    }
+    .pin-title {
+      font-weight: 600;
+      font-size: 1.1rem;
+      text-shadow: 0 0 5px #00ffff;
+    }
+    .pin-description {
+      color: #66ffff;
+      margin: 0.5rem 0;
+    }
+    .pin-iframe {
+      width: 100%;
+      height: 220px;
+      border: none;
+      margin-top: 0.5rem;
+      box-shadow: 0 0 5px #00ffff;
+    }
+
+    /* Grid layout for displaying pins in 3 columns */
+    #allPinsList,
+    #allEventsList,
+    #allMoodList {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Offcanvas Toggle (Hamburger) -->
+<button class="hamburger-btn" type="button" id="offcanvasToggle" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar">
+  <div class="hamburger-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</button>
+
+<!-- Offcanvas Navigation (Logout button removed) -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNavbar" aria-labelledby="offcanvasNavbarLabel">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="offcanvasNavbarLabel">Spot On</h5>
+    <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <nav class="navbar">
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+        <li class="nav-item"><a class="nav-link active" href="activity.html">View the Pin</a></li>
+        <li class="nav-item"><a class="nav-link" href="shop.html">Store</a></li>
+        <li class="nav-item"><a class="nav-link" href="guide.html">Instructions</a></li>
+        <li class="nav-item"><a class="nav-link" href="user/userlogin.html">User</a></li>
+        <li class="nav-item"><a class="nav-link" href="admin/adminlogin.html">Admin</a></li>
+        <li class="nav-item"><a class="nav-link" href="register.html">Sign Up</a></li>
+      </ul>
+    </nav>
+    <p class="mt-3">Take a look into possibilities.</p>
+  </div>
+</div>
+
+<!-- Horizontal Icon Navigation (User-specific toggles removed) -->
+<div class="icon-nav" id="iconNav">
+  <button data-target="allPinsSection" class="active">All Pins</button>
+  <button data-target="allEventsSection">All Events</button>
+  <button data-target="allMoodSection">All Mood</button>
+</div>
+
+<!-- Sections (Only public sections remain) -->
+<div id="allPinsSection" class="section-container active">
+  <div class="page-header"><h2>All Pins</h2></div>
+  <button class="btn btn-outline-info load-more-btn" id="loadMoreAllPinsBtn">Load More</button>
+  <div id="allPinsList"></div>
+</div>
+
+<div id="allEventsSection" class="section-container">
+  <div class="page-header"><h2>All Events</h2></div>
+  <button class="btn btn-outline-info load-more-btn" id="loadMoreAllEventsBtn">Load More</button>
+  <div id="allEventsList"></div>
+</div>
+
+<div id="allMoodSection" class="section-container">
+  <div class="page-header"><h2>All Mood Pins</h2></div>
+  <button class="btn btn-outline-info load-more-btn" id="loadMoreAllMoodBtn">Load More</button>
+  <div id="allMoodList"></div>
+</div>
+
+<!-- Firebase Scripts (Note: Auth-related code removed) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+  import { getDatabase, ref, get, query, orderByKey } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+
+  // ------------------- Firebase Config ---------------------
+  const firebaseConfig = {
+    apiKey: "AIzaSyADk7if-797jFI3Y3IUCnCXFSlOsFmX_3k",
+    authDomain: "spoton-cit481.firebaseapp.com",
+    databaseURL: "https://spoton-cit481-default-rtdb.firebaseio.com",
+    projectId: "spoton-cit481",
+    storageBucket: "spoton-cit481.appspot.com",
+    messagingSenderId: "753873898041",
+    appId: "1:753873898041:web:bde5e8f86aea63b175dbe8"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // HTML Element References
+  const iconNav = document.getElementById("iconNav");
+  const sections = document.querySelectorAll(".section-container");
+
+  const allPinsList   = document.getElementById("allPinsList");
+  const allEventsList = document.getElementById("allEventsList");
+  const allMoodList   = document.getElementById("allMoodList");
+
+  const loadMoreAllPinsBtn   = document.getElementById("loadMoreAllPinsBtn");
+  const loadMoreAllEventsBtn = document.getElementById("loadMoreAllEventsBtn");
+  const loadMoreAllMoodBtn   = document.getElementById("loadMoreAllMoodBtn");
+
+  // Utility function to generate embed content (Spotify, YouTube, etc.)
+  function generateEmbedContent(link) {
+    if (!link) return "";
+    // Spotify
+    if (link.includes("open.spotify.com/track/")) {
+      const embedUrl = link.replace("open.spotify.com/track/", "open.spotify.com/embed/track/");
+      return `<iframe class="pin-iframe" src="${embedUrl}" allow="encrypted-media" allowfullscreen></iframe>`;
+    }
+    // YouTube
+    if (link.includes("youtube.com/watch?v=") || link.includes("youtu.be/")) {
+      let videoId = "";
+      if (link.includes("watch?v=")) {
+        videoId = link.split("watch?v=")[1].split("&")[0];
+      } else {
+        videoId = link.split("youtu.be/")[1];
+      }
+      const embedUrl = `https://www.youtube.com/embed/${videoId}`;
+      return `<iframe class="pin-iframe" src="${embedUrl}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+    }
+    // Fallback
+    return `<iframe class="pin-iframe" src="${link}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+  }
+
+  // Create a read-only Pin Card (no edit/delete, no checkbox)
+  function createPinCard(pinObj, type, ownerUid, pinKey) {
+    const card = document.createElement("div");
+    card.className = "pin-card";
+
+    let html = `<div class="pin-title">${pinObj.title || "Untitled Pin"}</div>`;
+    html += `<div class="pin-description">${pinObj.description || ""}</div>`;
+
+    if (type === "moodPins" && pinObj.songLink) {
+      html += generateEmbedContent(pinObj.songLink);
+    }
+    if (type === "eventPins" && pinObj.imageUrl) {
+      html += `<img src="${pinObj.imageUrl}" alt="Event Image" class="img-fluid rounded mt-2" style="max-height:250px; object-fit:cover;">`;
+    }
+    if (type === "eventPins" && pinObj.geolocation) {
+      const { lat, lng } = pinObj.geolocation;
+      html += `<div class="pin-description mt-1">Location: ${lat}, ${lng}</div>`;
+    }
+
+    card.innerHTML += html;
+    return card;
+  }
+
+  // Toggle Sections
+  iconNav.addEventListener("click", (e) => {
+    if (e.target.matches("button[data-target]")) {
+      const targetId = e.target.getAttribute("data-target");
+      iconNav.querySelectorAll("button").forEach(btn => btn.classList.remove("active"));
+      e.target.classList.add("active");
+      sections.forEach(sec => {
+        sec.classList.remove("active");
+        if (sec.id === targetId) sec.classList.add("active");
+      });
+    }
+  });
+
+  // Display Pins with Pagination
+  function displayPinsInContainer(pinArray, container, displayedCountRef, howMany = 20) {
+    const end = displayedCountRef + howMany;
+    const slice = pinArray.slice(displayedCountRef, end);
+    slice.forEach((item) => {
+      const card = createPinCard(item.pin, item.type, item.ownerUid, item.key);
+      container.appendChild(card);
+    });
+    return end;
+  }
+
+  // Data Storage
+  let allPinsArray = [];
+  let displayedAllPinsCount = 0;
+  let allEventsArray = [];
+  let displayedAllEventsCount = 0;
+  let allMoodArray = [];
+  let displayedAllMoodCount = 0;
+
+  // Fetch All Pins (public view)
+  const pinsRootRef = ref(db, "pins");
+  get(query(pinsRootRef, orderByKey()))
+    .then((snap) => {
+      const allData = snap.val() || {};
+      let tempAllPins = [];
+      let tempAllEvents = [];
+      let tempAllMood = [];
+
+      // Loop through every user's pins
+      Object.entries(allData).forEach(([uid, userPins]) => {
+        if (userPins.eventPins) {
+          Object.entries(userPins.eventPins).forEach(([pinId, pinVal]) => {
+            const item = {
+              pin: pinVal,
+              type: "eventPins",
+              ownerUid: uid,
+              key: pinId
+            };
+            tempAllPins.push(item);
+            tempAllEvents.push(item);
+          });
+        }
+        if (userPins.moodPins) {
+          Object.entries(userPins.moodPins).forEach(([pinId, pinVal]) => {
+            const item = {
+              pin: pinVal,
+              type: "moodPins",
+              ownerUid: uid,
+              key: pinId
+            };
+            tempAllPins.push(item);
+            tempAllMood.push(item);
+          });
+        }
+      });
+
+      // Sorting (example: by key)
+      tempAllPins.sort((a, b) => a.key.localeCompare(b.key));
+      tempAllEvents.sort((a, b) => a.key.localeCompare(b.key));
+      tempAllMood.sort((a, b) => a.key.localeCompare(b.key));
+
+      allPinsArray   = tempAllPins;
+      allEventsArray = tempAllEvents;
+      allMoodArray   = tempAllMood;
+
+      displayedAllPinsCount   = 0;
+      displayedAllEventsCount = 0;
+      displayedAllMoodCount   = 0;
+
+      allPinsList.innerHTML   = "";
+      allEventsList.innerHTML = "";
+      allMoodList.innerHTML   = "";
+
+      loadMoreAllPinsBtn.style.display   = allPinsArray.length > 20 ? "inline-block" : "none";
+      loadMoreAllEventsBtn.style.display = allEventsArray.length > 20 ? "inline-block" : "none";
+      loadMoreAllMoodBtn.style.display   = allMoodArray.length > 20 ? "inline-block" : "none";
+
+      displayedAllPinsCount   = displayPinsInContainer(allPinsArray, allPinsList, displayedAllPinsCount, 20);
+      displayedAllEventsCount = displayPinsInContainer(allEventsArray, allEventsList, displayedAllEventsCount, 20);
+      displayedAllMoodCount   = displayPinsInContainer(allMoodArray, allMoodList, displayedAllMoodCount, 20);
+    })
+    .catch(err => {
+      console.error("Error fetching all pins:", err);
+    });
+</script>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

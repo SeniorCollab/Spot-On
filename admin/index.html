@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Interactive Map (Admin)</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Orbitron Font (Tron-like) -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap">
+
+  <style>
+    /* Global Tron-style (CLU/Rinzler color scheme) */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Orbitron', sans-serif;
+      background-color: #000; /* pitch black */
+      color: #ff3300; /* bright orange/red as base text color */
+    }
+    /* Background Video */
+    #bgvideo {
+      position: fixed;
+      top: 0;
+      left: 0;
+      min-width: 100%;
+      min-height: 100%;
+      z-index: -2;
+      object-fit: cover;
+      opacity: 1;
+    }
+    /* WebGL Earth Container */
+    #earth_div {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+    /* Offcanvas Toggle (Hamburger) */
+    #offcanvasToggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 20;
+      background: none;
+      border: none;
+      outline: none;
+      width: 50px;
+      height: 50px;
+    }
+    .hamburger-btn {
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      z-index: 20;
+    }
+    .hamburger-icon {
+      width: 30px;
+      height: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .hamburger-icon span {
+      display: block;
+      height: 4px;
+      width: 100%;
+      background-color: #ff3300; /* orange/red glow */
+      border-radius: 2px;
+      box-shadow: 0 0 5px #ff3300;
+    }
+    /* Offcanvas */
+    .offcanvas {
+      background-color: rgba(0, 0, 0, 0.95);
+      border-left: 2px solid #ff3300;
+    }
+    .offcanvas-header,
+    .offcanvas-body,
+    .offcanvas-title {
+      color: #ff3300;
+    }
+    .offcanvas .nav-link {
+      color: #ff3300;
+      border-bottom: 1px solid rgba(255, 51, 0, 0.2);
+      padding: 0.75rem 1rem;
+    }
+    .offcanvas .nav-link:hover,
+    .offcanvas .nav-link.active {
+      background-color: rgba(63, 0, 0, 0.5); /* a darker red overlay */
+    }
+    /* Logout button added to Offcanvas */
+    .offcanvas .logout-btn {
+      background-color: #ff3333;
+      color: #000;
+      border: none;
+      padding: 0.75rem 1rem;
+      width: 100%;
+      border-radius: 5px;
+      margin-top: 1rem;
+      text-transform: uppercase;
+    }
+    /* Admin Pin Form */
+    #pinForm label {
+      color: #ff3300;
+    }
+    #pinForm .form-control {
+      background-color: #330000; 
+      border: 1px solid #ff3300;
+      color: #ff3300;
+      border-radius: 0.5rem;
+    }
+    #pinForm .form-control:focus {
+      box-shadow: 0 0 5px #ff3300;
+      border-color: #ff3300;
+      color: #ff3300;
+    }
+    #pinForm .btn-success {
+      background-color: #ff3300;
+      border-color: #ff3300;
+      color: #000;
+      font-weight: bold;
+      transition: background-color 0.3s;
+    }
+    #pinForm .btn-success:hover {
+      background-color: #ff6600;
+      border-color: #ff6600;
+    }
+    /* Pin Popup (Tron style: CLU/Rinzler) */
+    .pin-popup-content {
+      background: rgba(63, 0, 0, 0.9);
+      border: 1px solid #ff3300;
+      box-shadow: 0 0 10px #ff3300;
+      color: #ff3300;
+      padding: 1em;
+      border-radius: 10px;
+      max-width: 300px;
+    }
+    .pin-iframe,
+    .pin-video,
+    .pin-audio {
+      display: block;
+      margin-top: 8px;
+      max-width: 100%;
+      border: none;
+      box-shadow: 0 0 5px #ff3300;
+    }
+    .pin-iframe {
+      height: 150px;
+    }
+    .pin-image {
+      margin-top: 8px;
+      max-width: 100%;
+      height: auto;
+      border-radius: 5px;
+      border: 2px solid #ff3300;
+      box-shadow: 0 0 5px #ff3300;
+    }
+    /* Buttons in the popup */
+    .btn-outline-light {
+      border-color: #ff3300;
+      color: #ff3300;
+      margin-right: 0.4rem;
+    }
+    .btn-outline-light:hover {
+      background-color: #ff3300;
+      color: #000;
+    }
+    .btn-warning {
+      background-color: #ff6600;
+      border-color: #ff6600;
+      color: #000;
+    }
+    .btn-warning:hover {
+      background-color: #ff9933;
+    }
+    .btn-danger {
+      background-color: #ff0000;
+      border-color: #ff0000;
+      color: #000;
+    }
+    .btn-danger:hover {
+      background-color: #ff3333;
+    }
+    .btn-outline-primary,
+    .btn-outline-secondary {
+      border-color: #ff3300 !important;
+      color: #ff3300 !important;
+    }
+    .btn-outline-primary:hover,
+    .btn-outline-secondary:hover {
+      background-color: #ff3300;
+      color: #000;
+    }
+    /* Additional styling for modals, etc. */
+    .modal-content {
+      background-color: rgba(63, 0, 0, 0.95);
+      border: 1px solid #ff3300;
+      color: #ff3300;
+    }
+    .modal-header .btn-close {
+      filter: brightness(0) invert(1);
+    }
+  </style>
+</head>
+<body>
+  <!-- Background Video -->
+  <video autoplay muted loop id="bgvideo">
+    <source src="stars.mp4" type="video/mp4">
+  </video>
+
+  <!-- WebGL Earth Container -->
+  <div id="earth_div"></div>
+
+  <!-- Offcanvas Toggle (hamburger) -->
+  <button class="hamburger-btn" type="button" id="offcanvasToggle" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar" aria-controls="offcanvasNavbar">
+    <div class="hamburger-icon">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  </button>
+
+  <!-- Offcanvas Sidebar for Navigation -->
+  <div class="offcanvas offcanvas-end" id="offcanvasNavbar" tabindex="-1">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title">Spot On (Admin)</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+      <nav class="navbar">
+        <ul class="navbar-nav">
+          <li class="nav-item"><a class="nav-link active" href="index.html">Home</a></li>
+          <li class="nav-item"><a class="nav-link" href="adminactivity.html">Admin Pin Control</a></li>
+          <li class="nav-item"><a class="nav-link" href="shop.html">My Store</a></li>
+        </ul>
+      </nav>
+
+      <!-- Logout Button -->
+      <button class="btn btn-danger w-100 mt-3 logout-btn" id="logoutBtn">Log Out</button>
+
+      <!-- Admin Add Pin Form -->
+      <h6 class="mt-4">Add a New Pin (Admin)</h6>
+      <form id="pinForm">
+        <div class="mb-3">
+          <label for="latitude" class="form-label">Latitude</label>
+          <input type="number" step="any" class="form-control" id="latitude" required>
+        </div>
+        <div class="mb-3">
+          <label for="longitude" class="form-label">Longitude</label>
+          <input type="number" step="any" class="form-control" id="longitude" required>
+        </div>
+        <div class="mb-3">
+          <label for="description" class="form-label">Description</label>
+          <input type="text" class="form-control" id="description" required>
+        </div>
+        <button type="submit" class="btn btn-success w-100">Add Pin</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Pin Modal for Pin Types (optional) -->
+  <div class="modal fade" id="pinModal" tabindex="-1" aria-labelledby="pinModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="pinModalLabel">Add Pin</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body text-center">
+          <p>Select Pin Type:</p>
+          <button type="button" class="btn btn-outline-primary mb-2" id="modalBtnSimple">Pin Event</button>
+          <button type="button" class="btn btn-outline-secondary mb-2" id="modalBtnDetailed">Pin Mood</button>
+          <button type="button" class="btn btn-outline-success mb-2" id="modalBtnShop">Pin Shop Item</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Libraries -->
+  <script src="https://www.webglearth.com/v2/api.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Firebase + Admin Logic (full control) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+    import { getDatabase, ref, push, set, onValue, get, remove, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyADk7if-797jFI3Y3IUCnCXFSlOsFmX_3k",
+      authDomain: "spoton-cit481.firebaseapp.com",
+      databaseURL: "https://spoton-cit481-default-rtdb.firebaseio.com",
+      projectId: "spoton-cit481",
+      storageBucket: "spoton-cit481.appspot.com",
+      messagingSenderId: "753873898041",
+      appId: "1:753873898041:web:bde5e8f86aea63b175dbe8"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    let currentUser = null;
+    // Markers array
+    let markersList = [];
+
+    // WebGL Earth
+    const earth = new WE.map("earth_div");
+    earth.setView([0, 0], 2);
+    WE.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors",
+      subdomains: "abc"
+    }).addTo(earth);
+
+    // Admin Auth Check
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        alert("You are not logged in. Redirecting...");
+        window.location.href = "../admin/adminlogin.html";
+        return;
+      }
+      // Check admin privileges
+      const adminRef = ref(db, "admin/" + user.uid);
+      const snap = await get(adminRef);
+      if (!snap.exists()) {
+        alert("Access denied. You are not an admin.");
+        window.location.href = "../index.html";
+        return;
+      }
+      currentUser = user;
+      loadAllPins(); 
+    });
+
+    // Logout Button Handler
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      signOut(auth)
+        .then(() => {
+          window.location.href = "../index.html";
+        })
+        .catch((err) => {
+          alert("Sign-out error: " + err.message);
+        });
+    });
+
+    // Load all pins from all users (admin can see all)
+    function loadAllPins() {
+      // Clear existing markers
+      markersList.forEach(m => m.removeFrom(earth));
+      markersList = [];
+      // Listen to "pins" root
+      onValue(ref(db, "pins"), snapshot => {
+        markersList.forEach(m => m.removeFrom(earth));
+        markersList = [];
+        const data = snapshot.val();
+        if (!data) return; 
+        // data = { userId1: {eventPins: {...}, moodPins: {...}, shopPins: {...}}, userId2: {...}, ... }
+        Object.entries(data).forEach(([userId, pinTypes]) => {
+          ["eventPins", "moodPins", "shopPins"].forEach(pinType => {
+            const pinsGroup = pinTypes[pinType];
+            if (pinsGroup) {
+              Object.entries(pinsGroup).forEach(([pinId, pinData]) => {
+                if (pinData.geolocation) {
+                  const marker = createMarker(pinData.geolocation.lat, pinData.geolocation.lng, pinData, userId, pinType, pinId);
+                  markersList.push(marker);
+                }
+              });
+            }
+          });
+        });
+      });
+    }
+
+    // Create a marker with admin controls (edit/delete).
+    function createMarker(lat, lng, pinData, userId, pinType, pinId) {
+      const marker = WE.marker([lat, lng]).addTo(earth);
+
+      let content = `<div class="pin-popup-content">
+        <strong>Title:</strong> ${pinData.title || "Untitled"}<br>
+        <strong>Description:</strong> ${pinData.description || ""}`;
+      
+      // if there's a link
+      if (pinData.songLink) {
+        content += `<br>${generateEmbedContent(pinData.songLink)}`;
+      }
+      // if there's an image
+      if (pinData.imageUrl) {
+        content += `<br><img class="pin-image" src="${pinData.imageUrl}" alt="Pin Image">`;
+      }
+      // Admin Delete / Edit
+      content += `
+        <br>
+        <button class="edit-button btn btn-warning btn-sm mt-2"
+                data-user="${userId}"
+                data-type="${pinType}"
+                data-id="${pinId}">
+          Edit
+        </button>
+        <button class="delete-button btn btn-danger btn-sm mt-2"
+                data-user="${userId}"
+                data-type="${pinType}"
+                data-id="${pinId}">
+          Delete
+        </button>
+      `;
+      content += "</div>";
+      marker.bindPopup(content);
+      return marker;
+    }
+
+    // Convert user link to an embeddable snippet (song/video).
+    function generateEmbedContent(link) {
+      if (!link) return "";
+      // Spotify
+      if (link.includes("open.spotify.com/track/")) {
+        const embedUrl = link.replace("open.spotify.com/track/", "open.spotify.com/embed/track/");
+        return `<iframe class="pin-iframe" src="${embedUrl}" allow="encrypted-media" allowfullscreen></iframe>`;
+      }
+      // YouTube
+      if (link.includes("youtube.com/watch?v=") || link.includes("youtu.be/")) {
+        let videoId = "";
+        if (link.includes("watch?v=")) {
+          videoId = link.split("watch?v=")[1];
+          if (videoId.includes("&")) videoId = videoId.split("&")[0];
+        } else {
+          videoId = link.split("youtu.be/")[1];
+        }
+        const embedUrl = `https://www.youtube.com/embed/${videoId}`;
+        return `<iframe class="pin-iframe" src="${embedUrl}" allowfullscreen></iframe>`;
+      }
+      // MP4 or MP3
+      if (link.endsWith(".mp4")) {
+        return `<video class="pin-video" src="${link}" controls></video>`;
+      }
+      if (link.endsWith(".mp3")) {
+        return `<audio class="pin-audio" src="${link}" controls></audio>`;
+      }
+      // fallback
+      return `<iframe class="pin-iframe" src="${link}" allowfullscreen></iframe>`;
+    }
+
+    // Listen for clicks on edit / delete
+    document.addEventListener("click", async (e) => {
+      if (e.target.classList.contains("delete-button")) {
+        const userId = e.target.dataset.user;
+        const pinType = e.target.dataset.type;
+        const pinId = e.target.dataset.id;
+        if (confirm("Are you sure you want to delete this pin?")) {
+          await remove(ref(db, `pins/${userId}/${pinType}/${pinId}`));
+          loadAllPins();
+        }
+      } 
+      else if (e.target.classList.contains("edit-button")) {
+        const userId = e.target.dataset.user;
+        const pinType = e.target.dataset.type;
+        const pinId = e.target.dataset.id;
+        const pinRef = ref(db, `pins/${userId}/${pinType}/${pinId}`);
+        const snapshot = await get(pinRef);
+        if (snapshot.exists()) {
+          const pinData = snapshot.val();
+          const newTitle = prompt("Edit Title:", pinData.title || "");
+          if (newTitle === null) return;
+          const newDesc = prompt("Edit Description:", pinData.description || "");
+          if (newDesc === null) return;
+          const newLink = prompt("Edit Song/Video Link (optional):", pinData.songLink || "");
+          if (newLink === null) return;
+          await update(pinRef, {
+            title: newTitle,
+            description: newDesc,
+            songLink: newLink
+          });
+          loadAllPins();
+        }
+      }
+    });
+
+    // Admin can add a brand new pin to "pins" root
+    document.getElementById("pinForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const lat = parseFloat(document.getElementById("latitude").value);
+      const lng = parseFloat(document.getElementById("longitude").value);
+      const description = document.getElementById("description").value.trim();
+      const pinsRef = ref(db, "pins");
+      const newPinRef = push(pinsRef);
+      const newPinData = {
+        title: "Untitled",
+        description: description,
+        geolocation: { lat, lng },
+        userId: currentUser.uid,
+        timestamp: Date.now()
+      };
+      await set(newPinRef, newPinData);
+      e.target.reset();
+      loadAllPins();
+    });
+
+    // Double-click on globe => add pin
+    let lastClickTime = 0;
+    const clickThreshold = 350;
+    earth.on("click", (event) => {
+      const now = Date.now();
+      if (now - lastClickTime < clickThreshold) {
+        if (event.latlng) {
+          document.getElementById("latitude").value = event.latlng.lat.toFixed(5);
+          document.getElementById("longitude").value = event.latlng.lng.toFixed(5);
+        }
+      }
+      lastClickTime = now;
+    });
+  </script>
+</body>
+</html>
+

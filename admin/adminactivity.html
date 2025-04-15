@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Activity - Spot On</title>
+
+  <!-- Fonts and Bootstrap -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    /* Admin Activity Page Styling (Toned down dark background with softer orange accents) */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      overflow-x: hidden;
+      font-family: 'Orbitron', sans-serif;
+      background-color: #121212;
+      color: #ffcc99; /* softer orange text */
+    }
+    /* Offcanvas Navigation (top-right hamburger) */
+    #offcanvasToggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1200;
+      background: none;
+      border: none;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .hamburger-icon {
+      width: 30px;
+      height: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .hamburger-icon span {
+      display: block;
+      height: 4px;
+      width: 100%;
+      background-color: #ff9900;
+      border-radius: 2px;
+      box-shadow: 0 0 5px #ff9900;
+    }
+    /* Offcanvas Sidebar */
+    .offcanvas {
+      background-color: rgba(18, 18, 18, 0.95);
+      border-left: 2px solid #ff9900;
+    }
+    .offcanvas-header,
+    .offcanvas-body,
+    .offcanvas-title {
+      color: #ff9900;
+    }
+    .offcanvas .nav-link {
+      color: #ff9900;
+      border-bottom: 1px solid rgba(255, 153, 0, 0.2);
+      padding: 0.75rem 1rem;
+    }
+    .offcanvas .nav-link:hover,
+    .offcanvas .nav-link.active {
+      background-color: rgba(51, 25, 0, 0.5);
+    }
+    /* Horizontal Icon Navigation */
+    .icon-nav {
+      display: flex;
+      overflow-x: auto;
+      background-color: rgba(18, 18, 18, 0.95);
+      box-shadow: 0 0 10px #ff9900;
+      border-bottom: 1px solid #ff9900;
+      padding: 0.5rem 1rem;
+      gap: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    .icon-nav button {
+      background: none;
+      border: 1px solid #ff9900;
+      color: #ff9900;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      flex-shrink: 0;
+      text-transform: uppercase;
+      font-size: 0.9rem;
+    }
+    .icon-nav button.active {
+      background-color: rgba(255, 153, 0, 0.2);
+    }
+    .icon-nav button:hover {
+      background-color: rgba(255, 153, 0, 0.1);
+    }
+    /* Section Container */
+    .section-container {
+      display: none;
+      padding: 1rem;
+    }
+    .section-container.active {
+      display: block;
+    }
+    /* Page Header */
+    .page-header {
+      background: rgba(18, 18, 18, 0.95);
+      border: 1px solid #ff9900;
+      box-shadow: 0 0 10px #ff9900;
+      color: #ff9900;
+      padding: 1.5rem;
+      border-radius: 0.5rem;
+      margin: 1rem 0;
+      text-align: center;
+    }
+    .page-header h2 {
+      font-size: 2rem;
+      margin: 0;
+      text-shadow: 0 0 5px #ff9900;
+    }
+    /* Pin Card Styles */
+    .pin-card {
+      background: rgba(18, 18, 18, 0.95);
+      border: 1px solid #ff9900;
+      box-shadow: 0 0 10px #ff9900;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      position: relative;
+      transition: transform 0.2s, box-shadow 0.2s;
+      aspect-ratio: 1 / 1;
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+    .pin-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 15px #ff9900;
+    }
+    .pin-title {
+      font-weight: 600;
+      font-size: 1.1rem;
+      text-shadow: 0 0 5px #ff9900;
+    }
+    .pin-description {
+      color: #ffcc99;
+      margin: 0.5rem 0;
+    }
+    .pin-iframe {
+      width: 100%;
+      height: 220px;
+      border: none;
+      margin-top: 0.5rem;
+      box-shadow: 0 0 5px #ff9900;
+    }
+    /* Checkbox for Bulk Deletion */
+    .select-checkbox {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      transform: scale(1.2);
+    }
+    /* Bulk Delete and Load More Buttons */
+    .bulk-delete-btn, .load-more-btn {
+      margin-bottom: 1rem;
+      margin-right: 1rem;
+    }
+    /* Edit Modal Styles */
+    .modal-content {
+      background-color: #121212;
+      color: #ff9900;
+      border: 1px solid #ff9900;
+    }
+    .modal-header, .modal-footer {
+      border: 1px solid #ff9900;
+    }
+    .form-label {
+      color: #ff9900;
+    }
+    .form-control {
+      background-color: rgba(18,18,18,0.8);
+      color: #ff9900;
+      border: 1px solid #ff9900;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Offcanvas Toggle (Hamburger) -->
+<button class="hamburger-btn" type="button" id="offcanvasToggle" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar">
+  <div class="hamburger-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</button>
+
+<!-- Offcanvas Navigation -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNavbar" aria-labelledby="offcanvasNavbarLabel">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="offcanvasNavbarLabel">Spot On (Admin)</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <nav class="navbar">
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+        <li class="nav-item"><a class="nav-link active" href="adminactivity.html">Activity</a></li>
+        <li class="nav-item"><a class="nav-link" href="shop.html">My Store</a></li>
+      </ul>
+    </nav>
+    <!-- Logout Button -->
+    <button class="btn btn-danger w-100 mt-3" id="logoutBtn">Log Out</button>
+  </div>
+</div>
+
+<!-- Horizontal Icon Navigation -->
+<div class="icon-nav" id="iconNav">
+  <button data-target="allPinsSection" class="active">All Pins</button>
+  <button data-target="myPinsSection">My Pins</button>
+  <button data-target="allEventsSection">All Events</button>
+  <button data-target="myEventsSection">My Events</button>
+  <button data-target="allMoodSection">All Mood</button>
+  <button data-target="myMoodSection">My Mood</button>
+</div>
+
+<!-- Sections -->
+<div id="allPinsSection" class="section-container active">
+  <div class="page-header"><h2>All Pins</h2></div>
+  <button class="btn btn-outline-info load-more-btn" id="loadMoreAllPinsBtn">Load More</button>
+  <div id="allPinsList" class="d-flex flex-wrap gap-3"></div>
+  <button class="btn btn-outline-danger bulk-delete-btn" id="bulkDeleteAllPinsBtn">Delete Selected</button>
+</div>
+
+<div id="myPinsSection" class="section-container">
+  <div class="page-header d-flex justify-content-between align-items-center flex-wrap">
+    <h2>My Pins</h2>
+    <button class="btn btn-outline-danger bulk-delete-btn" id="bulkDeleteMyPinsBtn">Delete Selected</button>
+  </div>
+  <div id="myPinsList" class="d-flex flex-wrap gap-3"></div>
+</div>
+
+<div id="allEventsSection" class="section-container">
+  <div class="page-header"><h2>All Events</h2></div>
+  <button class="btn btn-outline-info load-more-btn" id="loadMoreAllEventsBtn">Load More</button>
+  <div id="allEventsList" class="d-flex flex-wrap gap-3"></div>
+  <button class="btn btn-outline-danger bulk-delete-btn" id="bulkDeleteAllEventsBtn">Delete Selected</button>
+</div>
+
+<div id="myEventsSection" class="section-container">
+  <div class="page-header d-flex justify-content-between align-items-center flex-wrap">
+    <h2>My Events</h2>
+    <button class="btn btn-outline-danger bulk-delete-btn" id="bulkDeleteMyEventsBtn">Delete Selected</button>
+  </div>
+  <div id="myEventsList" class="d-flex flex-wrap gap-3"></div>
+</div>
+
+<div id="allMoodSection" class="section-container">
+  <div class="page-header"><h2>All Mood Pins</h2></div>
+  <button class="btn btn-outline-info load-more-btn" id="loadMoreAllMoodBtn">Load More</button>
+  <div id="allMoodList" class="d-flex flex-wrap gap-3"></div>
+  <button class="btn btn-outline-danger bulk-delete-btn" id="bulkDeleteAllMoodBtn">Delete Selected</button>
+</div>
+
+<div id="myMoodSection" class="section-container">
+  <div class="page-header d-flex justify-content-between align-items-center flex-wrap">
+    <h2>My Mood Pins</h2>
+    <button class="btn btn-outline-danger bulk-delete-btn" id="bulkDeleteMyMoodBtn">Delete Selected</button>
+  </div>
+  <div id="myMoodList" class="d-flex flex-wrap gap-3"></div>
+</div>
+
+<!-- Edit Modal (only for pins that belong to admin) -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <form class="modal-content" id="editForm">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Pin</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editPinType" />
+        <input type="hidden" id="editPinOwner" />
+        <input type="hidden" id="editPinId" />
+        <div class="mb-3">
+          <label for="editPinTitle" class="form-label">Title</label>
+          <input type="text" class="form-control" id="editPinTitle" required />
+        </div>
+        <div class="mb-3">
+          <label for="editPinDescription" class="form-label">Description</label>
+          <textarea class="form-control" id="editPinDescription" rows="2"></textarea>
+        </div>
+        <div class="mb-3" id="editSongLinkGroup" style="display: none;">
+          <label for="editPinSongLink" class="form-label">Song/Video Link</label>
+          <input type="url" class="form-control" id="editPinSongLink" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-outline-info">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Firebase, Authentication, and Data Logic -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+  import { getDatabase, ref, onValue, remove, update, get, query, orderByKey } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+
+  // Firebase Configuration (from admin index)
+  const firebaseConfig = {
+    apiKey: "AIzaSyADk7if-797jFI3Y3IUCnCXFSlOsFmX_3k",
+    authDomain: "spoton-cit481.firebaseapp.com",
+    databaseURL: "https://spoton-cit481-default-rtdb.firebaseio.com",
+    projectId: "spoton-cit481",
+    storageBucket: "spoton-cit481.appspot.com",
+    messagingSenderId: "753873898041",
+    appId: "1:753873898041:web:bde5e8f86aea63b175dbe8"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+
+  let currentUser = null;
+
+  // Enforce Admin Privileges
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      alert("You are not logged in. Redirecting to Admin Login.");
+      window.location.href = "adminlogin.html";
+      return;
+    }
+    // Verify if the user is an admin
+    const adminRef = ref(db, "admin/" + user.uid);
+    const snap = await get(adminRef);
+    if (!snap.exists()) {
+      alert("Access denied. You are not an admin.");
+      window.location.href = "index.html";
+      return;
+    }
+    currentUser = user;
+    fetchData();
+  });
+
+  // Utility function to generate embed content for song/video links.
+  function generateEmbedContent(link) {
+    if (!link) return "";
+    if (link.includes("open.spotify.com/track/")) {
+      const embedUrl = link.replace("open.spotify.com/track/", "open.spotify.com/embed/track/");
+      return `<iframe class="pin-iframe" src="${embedUrl}" allow="encrypted-media" allowfullscreen></iframe>`;
+    }
+    if (link.includes("youtube.com/watch?v=") || link.includes("youtu.be/")) {
+      let videoId = "";
+      if (link.includes("watch?v=")) {
+        videoId = link.split("watch?v=")[1].split("&")[0];
+      } else {
+        videoId = link.split("youtu.be/")[1];
+      }
+      const embedUrl = `https://www.youtube.com/embed/${videoId}`;
+      return `<iframe class="pin-iframe" src="${embedUrl}" allowfullscreen></iframe>`;
+    }
+    return `<iframe class="pin-iframe" src="${link}" allowfullscreen></iframe>`;
+  }
+
+  // Create a card for each pin.
+  function createPinCard(pinObj, type, ownerUid, pinKey, isOwner) {
+    const card = document.createElement("div");
+    card.className = "pin-card";
+
+    // Bulk deletion checkbox (always available)
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.className = "select-checkbox";
+    checkbox.dataset.pinId = pinKey;
+    checkbox.dataset.pinType = type;
+    checkbox.dataset.pinOwner = ownerUid;
+    card.appendChild(checkbox);
+
+    let html = `<div class="pin-title">${pinObj.title || "Untitled Pin"}</div>`;
+    html += `<div class="pin-description">${pinObj.description || ""}</div>`;
+
+    if (type === "moodPins" && pinObj.songLink) {
+      html += generateEmbedContent(pinObj.songLink);
+    }
+    if (type === "eventPins" && pinObj.imageUrl) {
+      html += `<img src="${pinObj.imageUrl}" alt="Event Image" class="img-fluid rounded mt-2" style="max-height:250px; object-fit:cover;">`;
+    }
+    if (type === "eventPins" && pinObj.geolocation) {
+      const { lat, lng } = pinObj.geolocation;
+      html += `<div class="pin-description mt-1">Location: ${lat}, ${lng}</div>`;
+    }
+    card.innerHTML += html;
+
+    // Action buttons container
+    const actions = document.createElement("div");
+    actions.className = "mt-2";
+
+    // Edit button (only if admin owns the pin)
+    if (isOwner) {
+      const editBtn = document.createElement("button");
+      editBtn.className = "btn btn-sm btn-outline-secondary me-2";
+      editBtn.textContent = "Edit";
+      editBtn.addEventListener("click", () => {
+        document.getElementById("editPinType").value = type;
+        document.getElementById("editPinOwner").value = ownerUid;
+        document.getElementById("editPinId").value = pinKey;
+        document.getElementById("editPinTitle").value = pinObj.title || "";
+        document.getElementById("editPinDescription").value = pinObj.description || "";
+        if (type === "moodPins") {
+          document.getElementById("editSongLinkGroup").style.display = "block";
+          document.getElementById("editPinSongLink").value = pinObj.songLink || "";
+        } else {
+          document.getElementById("editSongLinkGroup").style.display = "none";
+          document.getElementById("editPinSongLink").value = "";
+        }
+        editModal.show();
+      });
+      actions.appendChild(editBtn);
+    }
+    // Delete button (available for all pins)
+    const delBtn = document.createElement("button");
+    delBtn.className = "btn btn-sm btn-outline-danger";
+    delBtn.textContent = "Delete";
+    delBtn.addEventListener("click", () => {
+      if (confirm("Delete this pin?")) {
+        remove(ref(db, `pins/${ownerUid}/${type}/${pinKey}`));
+      }
+    });
+    actions.appendChild(delBtn);
+    card.appendChild(actions);
+
+    return card;
+  }
+
+  // Bulk deletion function: deletes pins based on checkbox data (using stored owner, type and id)
+  function bulkDelete(containerId) {
+    const container = document.getElementById(containerId);
+    const checkboxes = container.querySelectorAll(".select-checkbox:checked");
+    if (!checkboxes.length) {
+      alert("No pins selected for deletion.");
+      return;
+    }
+    if (!confirm(`Delete ${checkboxes.length} selected pin(s)?`)) {
+      return;
+    }
+    checkboxes.forEach(cb => {
+      const pinId = cb.dataset.pinId;
+      const pinType = cb.dataset.pinType;
+      const pinOwner = cb.dataset.pinOwner;
+      remove(ref(db, `pins/${pinOwner}/${pinType}/${pinId}`));
+    });
+  }
+
+  // Pagination: display a set number of pins at a time
+  function displayPinsInContainer(pinArray, container, displayedCount, howMany = 20) {
+    const end = displayedCount + howMany;
+    const slice = pinArray.slice(displayedCount, end);
+    slice.forEach(item => {
+      const card = createPinCard(item.pin, item.type, item.ownerUid, item.key, item.isOwner);
+      container.appendChild(card);
+    });
+    return end;
+  }
+
+  // Global arrays and counters for pagination
+  let allPinsArray = [];
+  let displayedAllPinsCount = 0;
+  let allEventsArray = [];
+  let displayedAllEventsCount = 0;
+  let allMoodArray = [];
+  let displayedAllMoodCount = 0;
+
+  let myEventPins = [];
+  let myMoodPins = [];
+
+  // DOM Elements from different sections
+  const allPinsList     = document.getElementById("allPinsList");
+  const myPinsList      = document.getElementById("myPinsList");
+  const allEventsList   = document.getElementById("allEventsList");
+  const myEventsList    = document.getElementById("myEventsList");
+  const allMoodList     = document.getElementById("allMoodList");
+  const myMoodList      = document.getElementById("myMoodList");
+
+  // Load More buttons
+  const loadMoreAllPinsBtn   = document.getElementById("loadMoreAllPinsBtn");
+  const loadMoreAllEventsBtn = document.getElementById("loadMoreAllEventsBtn");
+  const loadMoreAllMoodBtn   = document.getElementById("loadMoreAllMoodBtn");
+
+  // Bulk deletion buttons (for sections with loaded pins)
+  document.getElementById("bulkDeleteAllPinsBtn").addEventListener("click", () => {
+    bulkDelete("allPinsList");
+  });
+  document.getElementById("bulkDeleteMyPinsBtn").addEventListener("click", () => {
+    bulkDelete("myPinsList");
+  });
+  document.getElementById("bulkDeleteAllEventsBtn").addEventListener("click", () => {
+    bulkDelete("allEventsList");
+  });
+  document.getElementById("bulkDeleteMyEventsBtn").addEventListener("click", () => {
+    bulkDelete("myEventsList");
+  });
+  document.getElementById("bulkDeleteAllMoodBtn").addEventListener("click", () => {
+    bulkDelete("allMoodList");
+  });
+  document.getElementById("bulkDeleteMyMoodBtn").addEventListener("click", () => {
+    bulkDelete("myMoodList");
+  });
+
+  // Horizontal navigation toggle between sections
+  document.getElementById("iconNav").addEventListener("click", (e) => {
+    if (e.target.matches("button[data-target]")) {
+      const targetId = e.target.getAttribute("data-target");
+      document.querySelectorAll("#iconNav button").forEach(btn => btn.classList.remove("active"));
+      e.target.classList.add("active");
+      document.querySelectorAll(".section-container").forEach(sec => {
+        sec.classList.remove("active");
+        if (sec.id === targetId) sec.classList.add("active");
+      });
+    }
+  });
+
+  // Load More event listeners
+  loadMoreAllPinsBtn.addEventListener("click", () => {
+    displayedAllPinsCount = displayPinsInContainer(allPinsArray, allPinsList, displayedAllPinsCount, 20);
+    if (displayedAllPinsCount >= allPinsArray.length) loadMoreAllPinsBtn.style.display = "none";
+  });
+  loadMoreAllEventsBtn.addEventListener("click", () => {
+    displayedAllEventsCount = displayPinsInContainer(allEventsArray, allEventsList, displayedAllEventsCount, 20);
+    if (displayedAllEventsCount >= allEventsArray.length) loadMoreAllEventsBtn.style.display = "none";
+  });
+  loadMoreAllMoodBtn.addEventListener("click", () => {
+    displayedAllMoodCount = displayPinsInContainer(allMoodArray, allMoodList, displayedAllMoodCount, 20);
+    if (displayedAllMoodCount >= allMoodArray.length) loadMoreAllMoodBtn.style.display = "none";
+  });
+
+  // Edit Modal handling
+  const editModal = new bootstrap.Modal(document.getElementById("editModal"));
+  const editForm = document.getElementById("editForm");
+  editForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const pinKey = document.getElementById("editPinId").value;
+    const type   = document.getElementById("editPinType").value;
+    const owner  = document.getElementById("editPinOwner").value;
+    // Only allow editing if the admin owns the pin.
+    if (owner !== currentUser.uid) {
+      alert("You do not own this pin.");
+      return;
+    }
+    const updates = {
+      title: document.getElementById("editPinTitle").value.trim(),
+      description: document.getElementById("editPinDescription").value.trim()
+    };
+    if (type === "moodPins") {
+      updates.songLink = document.getElementById("editPinSongLink").value.trim();
+    }
+    update(ref(db, `pins/${owner}/${type}/${pinKey}`), updates)
+      .then(() => {
+        editModal.hide();
+      })
+      .catch(err => {
+        console.error("Error updating pin:", err);
+        alert("Failed to update the pin.");
+      });
+  });
+
+  // Logout handler
+  document.getElementById("logoutBtn").addEventListener("click", () => {
+    signOut(auth).then(() => {
+      window.location.href = "index.html";
+    }).catch(err => {
+      console.error("Sign-out error:", err);
+      alert("Failed to sign out.");
+    });
+  });
+
+  // Fetch Data (loads both the admin’s pins and all pins from every user)
+  function fetchData() {
+    // 1) Listen for changes to my own pins (real-time listener)
+    const myPinsRef = ref(db, `pins/${currentUser.uid}`);
+    onValue(myPinsRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      myPinsList.innerHTML = "";
+      document.getElementById("myEventsList").innerHTML = "";
+      document.getElementById("myMoodList").innerHTML = "";
+      myEventPins = [];
+      myMoodPins = [];
+      if (data.eventPins) {
+        Object.entries(data.eventPins).forEach(([key, val]) => {
+          const card = createPinCard(val, "eventPins", currentUser.uid, key, true);
+          myPinsList.appendChild(card.cloneNode(true));
+          document.getElementById("myEventsList").appendChild(card);
+          myEventPins.push({ key, pin: val });
+        });
+      }
+      if (data.moodPins) {
+        Object.entries(data.moodPins).forEach(([key, val]) => {
+          const card = createPinCard(val, "moodPins", currentUser.uid, key, true);
+          myPinsList.appendChild(card.cloneNode(true));
+          document.getElementById("myMoodList").appendChild(card);
+          myMoodPins.push({ key, pin: val });
+        });
+      }
+    });
+
+    // 2) Get all pins (one-time fetch with sorting)
+    const pinsRootRef = ref(db, "pins");
+    get(query(pinsRootRef, orderByKey()))
+      .then((snap) => {
+        const allData = snap.val() || {};
+        let tempAllPins = [];
+        let tempAllEvents = [];
+        let tempAllMood = [];
+        Object.entries(allData).forEach(([uid, userPins]) => {
+          if (userPins.eventPins) {
+            Object.entries(userPins.eventPins).forEach(([pinId, pinVal]) => {
+              const item = {
+                pin: pinVal,
+                type: "eventPins",
+                ownerUid: uid,
+                key: pinId,
+                isOwner: (uid === currentUser.uid)
+              };
+              tempAllPins.push(item);
+              tempAllEvents.push(item);
+            });
+          }
+          if (userPins.moodPins) {
+            Object.entries(userPins.moodPins).forEach(([pinId, pinVal]) => {
+              const item = {
+                pin: pinVal,
+                type: "moodPins",
+                ownerUid: uid,
+                key: pinId,
+                isOwner: (uid === currentUser.uid)
+              };
+              tempAllPins.push(item);
+              tempAllMood.push(item);
+            });
+          }
+        });
+        // Sort items by key (or adjust as needed)
+        tempAllPins.sort((a, b) => a.key.localeCompare(b.key));
+        tempAllEvents.sort((a, b) => a.key.localeCompare(b.key));
+        tempAllMood.sort((a, b) => a.key.localeCompare(b.key));
+
+        allPinsArray = tempAllPins;
+        allEventsArray = tempAllEvents;
+        allMoodArray = tempAllMood;
+
+        displayedAllPinsCount = 0;
+        displayedAllEventsCount = 0;
+        displayedAllMoodCount = 0;
+
+        allPinsList.innerHTML = "";
+        document.getElementById("allEventsList").innerHTML = "";
+        document.getElementById("allMoodList").innerHTML = "";
+
+        loadMoreAllPinsBtn.style.display = allPinsArray.length > 20 ? "inline-block" : "none";
+        loadMoreAllEventsBtn.style.display = allEventsArray.length > 20 ? "inline-block" : "none";
+        loadMoreAllMoodBtn.style.display = allMoodArray.length > 20 ? "inline-block" : "none";
+
+        displayedAllPinsCount = displayPinsInContainer(allPinsArray, allPinsList, displayedAllPinsCount, 20);
+        displayedAllEventsCount = displayPinsInContainer(allEventsArray, document.getElementById("allEventsList"), displayedAllEventsCount, 20);
+        displayedAllMoodCount = displayPinsInContainer(allMoodArray, document.getElementById("allMoodList"), displayedAllMoodCount, 20);
+      })
+      .catch(err => {
+        console.error("Error fetching all pins:", err);
+      });
+  }
+</script>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+

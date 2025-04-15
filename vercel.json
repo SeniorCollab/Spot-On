@@ -1,0 +1,9 @@
+{
+  "redirects": [
+    {
+      "source": "/__/auth/action",
+      "destination": "/user/userlogin.html",
+      "permanent": false
+    }
+  ]
+}
