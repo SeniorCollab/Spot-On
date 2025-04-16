@@ -116,6 +116,15 @@
       border: 2px solid #00ffff;
       box-shadow: 0 0 5px #00ffff;
     }
+    /* Tron-styled popup container */
+    .tron-popup-container {
+      background-color: rgba(0, 0, 0, 0.9);
+      border: 2px solid #00ffff;
+      border-radius: 10px;
+      padding: 1rem;
+      box-shadow: 0 0 10px #00ffff;
+      color: #00ffff;
+    }
     /* Mobile-Specific Styles */
     @media (max-width: 768px) {
       /* Adjust offcanvas to drop down with Tron glitch effect */
@@ -217,8 +226,7 @@
 
     // Create the globe
     const earth = new WE.map('earth_div');
-    // Set a base zoom level; mobile adjustments will be handled later.
-    earth.setView([0, 0], 2);
+    earth.setView([0, 0], 2); // Base zoom level on all devices
     WE.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors',
       subdomains: 'abc'
@@ -259,13 +267,16 @@
       - Title
       - Description
       - Embedded media (if any)
-      - Read-only likes/dislikes
+      - Read-only likes/dislikes,
+      All wrapped in a Tron-themed container.
     */
     function addPin(lat, lng, pinData) {
       const marker = WE.marker([lat, lng]).addTo(earth);
+      
       let content = `
-        <strong>${pinData.title || "Untitled"}</strong><br>
-        ${pinData.description || ""}
+        <div class="tron-popup-container">
+          <strong>${pinData.title || "Untitled"}</strong><br>
+          ${pinData.description || ""}
       `;
       if (pinData.songLink) {
         content += `<br>${generateEmbedContent(pinData.songLink)}`;
@@ -281,6 +292,7 @@
       const likeCount = pinData.likes || 0;
       const dislikeCount = pinData.dislikes || 0;
       content += `<br><small>Likes: ${likeCount} | Dislikes: ${dislikeCount}</small>`;
+      content += "</div>";
       marker.bindPopup(content);
     }
     
@@ -307,55 +319,39 @@
     loadPinsFromFirebase();
 
     // -------------------------------
-    // Mobile-Specific Touch Gestures
+    // Mobile-Specific Touch Gestures (No double-tap zoom)
     // -------------------------------
     if (window.innerWidth <= 768) {
-      // Initialize Hammer.js on the globe container
       const earthDiv = document.getElementById('earth_div');
       const hammer = new Hammer.Manager(earthDiv);
       
-      // Add pinch, pan and doubletap recognizers
+      // Add pinch and pan recognizers
       const pinch = new Hammer.Pinch();
       const pan = new Hammer.Pan({ threshold: 10 });
-      const doubleTap = new Hammer.Tap({ event: 'doubletap', taps: 2 });
-      hammer.add([pinch, pan, doubleTap]);
+      hammer.add([pinch, pan]);
       
       let currentZoom = 2;
       const minZoom = 2;
       const maxZoom = 5;
       
-      // Handle pinch gesture for zooming
       hammer.on('pinch', function(ev) {
-        // Calculate a new zoom level based on the pinch scale
         let newZoom = currentZoom * ev.scale;
         newZoom = Math.max(minZoom, Math.min(maxZoom, newZoom));
         earth.setZoom(newZoom);
       });
-
-      // When the pinch ends, update currentZoom for the next interaction
       hammer.on('pinchend', function(ev) {
         currentZoom = earth.getZoom();
       });
-
-      // Handle pan gesture to move the globe
+      
       hammer.on('pan', function(ev) {
-        // Retrieve current center and apply offset from pan gesture.
-        // (This is a simple example—tweak sensitivity if needed.)
         const center = earth.getCenter();
         const latOffset = ev.deltaY * -0.01;
         const lngOffset = ev.deltaX * 0.01;
         earth.setView([center[0] + latOffset, center[1] + lngOffset], earth.getZoom());
       });
-
-      // Handle double-tap gesture to zoom in a fixed increment
-      hammer.on('doubletap', function(ev) {
-        let newZoom = earth.getZoom() + 0.5;
-        newZoom = Math.min(newZoom, maxZoom);
-        earth.setZoom(newZoom);
-        currentZoom = newZoom;
-      });
     }
   </script>
 </body>
 </html>
+
 
