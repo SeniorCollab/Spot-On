@@ -1,789 +1,883 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <title>Cesium: Interactive Map with Custom Popup & Editable Pins</title>
-    <!-- Cesium CSS -->
-    <link rel="stylesheet" href="https://cesium.com/downloads/cesiumjs/releases/1.100/Build/Cesium/Widgets/widgets.css" />
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Tron-like font from Google Fonts -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap">
-    <style>
-      /* Ensure the whole document and Cesium container are opaque and black */
-      html, body {
-        margin: 0;
-        padding: 0;
-        width: 100%;
-        height: 100%;
-        background-color: #000;
-        font-family: 'Orbitron', sans-serif;
-        color: #00ffff;
-        overflow: hidden;
-      }
-      /* Background Video */
-      #bgvideo {
-        position: fixed;
-        top: 0;
-        left: 0;
-        min-width: 100%;
-        min-height: 100%;
-        z-index: -2;
-        object-fit: cover;
-        opacity: 1;
-      }
-      /* Cesium Container – force an opaque background */
-      #cesiumContainer {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 1;
-        background-color: #000 !important;
-      }
-      /* Ensure the Cesium canvas remains opaque */
-      #cesiumContainer canvas {
-        opacity: 1 !important;
-      }
-      /* Offcanvas Toggle (Hamburger) */
-      #offcanvasToggle {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 20;
-        background: transparent;
-        border: none;
-        outline: none;
-      }
-      .hamburger-btn {
-        background: none;
-        border: none;
-        padding: 0;
-        cursor: pointer;
-        z-index: 20;
-        position: fixed;
-        top: 20px;
-        right: 20px;
-      }
-      .hamburger-icon {
-        width: 30px;
-        height: 22px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-      }
-      .hamburger-icon span {
-        display: block;
-        height: 4px;
-        width: 100%;
-        background-color: #00ffff;
-        border-radius: 2px;
-        box-shadow: 0 0 5px #00ffff;
-      }
-      /* Tron-inspired Offcanvas Sidebar */
-      .offcanvas {
-        background-color: rgba(0, 0, 0, 0.95);
-        border-left: 2px solid #00ffff;
-      }
-      .offcanvas-header,
-      .offcanvas-body,
-      .offcanvas-title {
-        color: #00ffff;
-      }
-      .offcanvas .nav-link {
-        color: #00ffff;
-        border-bottom: 1px solid rgba(0, 255, 255, 0.2);
-      }
-      .offcanvas .nav-link.active {
-        background-color: rgba(0, 31, 63, 0.5);
-      }
-      .offcanvas .nav-link:hover {
-        background-color: rgba(0, 31, 63, 0.5);
-      }
-      /* Tron-style gradient forms and pin popups */
-      .blue-gradient-form {
-        background: rgba(0, 31, 63, 0.85);
-        border: 1px solid #00ffff;
-        box-shadow: 0 0 10px #00ffff;
-        color: #00ffff;
-        padding: 1em;
-        border-radius: 10px;
-      }
-      .pin-popup-content {
-        background: rgba(0, 31, 63, 0.9);
-        border: 1px solid #00ffff;
-        box-shadow: 0 0 10px #00ffff;
-        color: #00ffff;
-        padding: 1em;
-        border-radius: 10px;
-        max-width: 300px;
-      }
-      /* Custom Popup (for our entity click) – fully controlled via CSS */
-      #customPopup {
-        position: absolute;
-        background-color: #111;
-        color: #00ffff;
-        border: 2px solid #00ffff;
-        border-radius: 10px;
-        padding: 10px;
-        box-shadow: 0 0 10px #00ffff;
-        font-family: 'Orbitron', sans-serif;
-        z-index: 100;
-        display: none;
-        max-width: 300px;
-      }
-      /* Button Styles */
-      .btn {
-        font-family: 'Orbitron', sans-serif;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-      }
-      .btn-outline-primary,
-      .btn-outline-secondary,
-      .btn-outline-light {
-        border-color: #00ffff;
-        color: #00ffff;
-      }
-      .btn-outline-primary:hover,
-      .btn-outline-secondary:hover,
-      .btn-outline-light:hover {
-        background-color: #00ffff;
-        color: #000;
-      }
-      .btn-warning {
-        background-color: #ffaa00;
-        border-color: #ffaa00;
-        color: #000;
-      }
-      .btn-warning:hover {
-        background-color: #ffcc00;
-      }
-      .btn-danger {
-        background-color: #ff3333;
-        border-color: #ff3333;
-        color: #000;
-      }
-      .btn-danger:hover {
-        background-color: #ff6666;
-      }
-      .btn-success {
-        background-color: #00ff00;
-        border-color: #00ff00;
-        color: #000;
-      }
-      .btn-success:hover {
-        background-color: #33ff33;
-      }
-      /* Embedded Media Elements */
-      .pin-iframe,
-      .pin-video,
-      .pin-audio {
-        display: block;
-        margin-top: 8px;
-        max-width: 100%;
-        border: none;
-        box-shadow: 0 0 5px #00ffff;
-      }
-      .pin-iframe {
-        height: 150px;
-      }
-      .pin-image {
-        margin-top: 8px;
-        max-width: 100%;
-        height: auto;
-        border-radius: 5px;
-        border: 2px solid #00ffff;
-        box-shadow: 0 0 5px #00ffff;
-      }
-    </style>
-  </head>
-  <body>
-    <!-- Background Video -->
-    <video autoplay muted loop id="bgvideo">
-      <source src="stars.mp4" type="video/mp4">
-    </video>
+<head>
+  <meta charset="utf-8" />
+  <title>Interactive Map with Editable Pins</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Tron-like font from Google Fonts (Orbitron) -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap">
+  <style>
+    /* Global Styles */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      /* No background color so video remains visible */
+      font-family: 'Orbitron', sans-serif;
+      color: #00ffff; /* neon cyan as base text color */
+    }
+    /* Video Background */
+    #bgvideo {
+      position: fixed;
+      top: 0;
+      left: 0;
+      min-width: 100%;
+      min-height: 100%;
+      z-index: -2;
+      object-fit: cover;
+      opacity: 1; /* video fully visible */
+    }
+    /* Globe / WebGL Earth Container */
+    #earth_div {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+    /* Offcanvas Toggle (Hamburger) */
+    #offcanvasToggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 20;
+      background: transparent;
+      border: none;
+      outline: none;
+    }
+    .hamburger-btn {
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      z-index: 20;
+      position: fixed;
+      top: 20px;
+      right: 20px;
+    }
+    .hamburger-icon {
+      width: 30px;
+      height: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .hamburger-icon span {
+      display: block;
+      height: 4px;
+      width: 100%;
+      background-color: #00ffff; /* neon cyan */
+      border-radius: 2px;
+      box-shadow: 0 0 5px #00ffff;
+    }
+    /* Tron-inspired Offcanvas Sidebar */
+    .offcanvas {
+      background-color: rgba(0, 0, 0, 0.95);
+      border-left: 2px solid #00ffff;
+    }
+    .offcanvas-header,
+    .offcanvas-body,
+    .offcanvas-title {
+      color: #00ffff;
+    }
+    .offcanvas .nav-link {
+      color: #00ffff;
+      border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+    }
+    /* Explicit styling for active nav links */
+    .offcanvas .nav-link.active {
+      color: #00ffff;
+      background-color: rgba(0, 31, 63, 0.5);
+    }
+    .offcanvas .nav-link:hover {
+      background-color: rgba(0, 31, 63, 0.5);
+    }
+    /* Tron-style gradient form (for modals & forms) */
+    .blue-gradient-form {
+      background: rgba(0, 31, 63, 0.85);
+      border: 1px solid #00ffff;
+      box-shadow: 0 0 10px #00ffff;
+      color: #00ffff;
+      padding: 1em;
+      border-radius: 10px;
+    }
+    /* Popup styling for pins */
+    .pin-popup-content {
+      background: rgba(0, 31, 63, 0.9);
+      border: 1px solid #00ffff;
+      box-shadow: 0 0 10px #00ffff;
+      color: #00ffff;
+      padding: 1em;
+      border-radius: 10px;
+      max-width: 300px;
+    }
+    /* Button styles (overriding some Bootstrap defaults) */
+    .btn {
+      font-family: 'Orbitron', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .btn-outline-primary {
+      border-color: #00ffff;
+      color: #00ffff;
+    }
+    .btn-outline-primary:hover {
+      background-color: #00ffff;
+      color: #000;
+    }
+    .btn-outline-secondary {
+      border-color: #00ffff;
+      color: #00ffff;
+    }
+    .btn-outline-secondary:hover {
+      background-color: #00ffff;
+      color: #000;
+    }
+    .btn-outline-light {
+      border-color: #00ffff;
+      color: #00ffff;
+    }
+    .btn-outline-light:hover {
+      background-color: #00ffff;
+      color: #000;
+    }
+    .btn-warning {
+      background-color: #ffaa00;
+      border-color: #ffaa00;
+      color: #000;
+    }
+    .btn-warning:hover {
+      background-color: #ffcc00;
+    }
+    .btn-danger {
+      background-color: #ff3333;
+      border-color: #ff3333;
+      color: #000;
+    }
+    .btn-danger:hover {
+      background-color: #ff6666;
+    }
+    .btn-success {
+      background-color: #00ff00;
+      border-color: #00ff00;
+      color: #000;
+    }
+    .btn-success:hover {
+      background-color: #33ff33;
+    }
+    /* Embedded media elements */
+    .pin-iframe,
+    .pin-video,
+    .pin-audio {
+      display: block;
+      margin-top: 8px;
+      max-width: 100%;
+      border: none;
+      box-shadow: 0 0 5px #00ffff;
+    }
+    .pin-iframe {
+      height: 150px;
+    }
+    .pin-image {
+      margin-top: 8px;
+      max-width: 100%;
+      height: auto;
+      border-radius: 5px;
+      border: 2px solid #00ffff;
+      box-shadow: 0 0 5px #00ffff;
+    }
+  </style>
+</head>
+<body>
+  <!-- Background Video -->
+  <video autoplay muted loop id="bgvideo">
+    <source src="stars.mp4" type="video/mp4">
+  </video>
 
-    <!-- Offcanvas Sidebar for Navigation -->
-    <button class="hamburger-btn" type="button" id="offcanvasToggle" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar" aria-controls="offcanvasNavbar">
-      <div class="hamburger-icon">
-        <span></span>
-        <span></span>
-        <span></span>
-      </div>
-    </button>
-    <div class="offcanvas offcanvas-end" id="offcanvasNavbar" tabindex="-1">
-      <div class="offcanvas-header">
-        <h5 class="offcanvas-title">Spot On</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
-      </div>
-      <div class="offcanvas-body">
-        <nav class="navbar">
-          <ul class="navbar-nav">
-            <li class="nav-item"><a class="nav-link active" href="index.html">Home</a></li>
-            <li class="nav-item"><a class="nav-link" href="activity.html">View the Pin</a></li>
-            <li class="nav-item"><a class="nav-link" href="shop.html">Store</a></li>
-            <li class="nav-item"><a class="nav-link" href="guide.html">Instructions</a></li>
-            <li class="nav-item"><a class="nav-link" href="testces.html">Test New Globe</a></li>
-          </ul>
-        </nav>
+  <!-- WebGL Earth Container -->
+  <div id="earth_div"></div>
 
-        <!-- Filter and Logout Buttons -->
-        <button class="btn btn-outline-primary w-100 mt-3" id="toggleMyPinsBtn">Show My Pins Only</button>
-        <button class="btn btn-danger w-100 mt-3" id="logoutBtn">Log Out</button>
-
-        <!-- Search Pins -->
-        <h6 class="mt-4">Search Pins</h6>
-        <form id="searchForm">
-          <input type="text" class="form-control mb-2" id="searchInput" placeholder="Search by description">
-          <button type="submit" class="btn btn-primary w-100">Search</button>
-        </form>
-
-        <!-- Dedicated Button to Invoke the Pin Modal -->
-        <div class="mt-4">
-          <h6>Add a Pin</h6>
-          <button type="button" class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#pinModal">
-            Add Pin via Modal
-          </button>
-        </div>
-
-        <!-- Offcanvas Form (Manual Entry) for Adding a New Pin -->
-        <h6 class="mt-4">Or Add Manually</h6>
-        <form id="pinForm" class="blue-gradient-form">
-          <div class="mb-2">
-            <label for="latitude" class="form-label">Latitude</label>
-            <input type="number" class="form-control" id="latitude" required>
-          </div>
-          <div class="mb-2">
-            <label for="longitude" class="form-label">Longitude</label>
-            <input type="number" class="form-control" id="longitude" required>
-          </div>
-          <div class="mb-2">
-            <label for="description" class="form-label">Description</label>
-            <input type="text" class="form-control" id="description" required>
-          </div>
-          <button type="submit" class="btn btn-success w-100">Add Pin</button>
-        </form>
-      </div>
+  <!-- Custom Hamburger (Offcanvas Toggle) -->
+  <button class="hamburger-btn" type="button" id="offcanvasToggle" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar" aria-controls="offcanvasNavbar">
+    <div class="hamburger-icon">
+      <span></span>
+      <span></span>
+      <span></span>
     </div>
+  </button>
 
-    <!-- Cesium Map Container -->
-    <div id="cesiumContainer"></div>
+  <!-- Offcanvas Sidebar for Navigation -->
+  <div class="offcanvas offcanvas-end" id="offcanvasNavbar" tabindex="-1">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title">Spot On</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+      <nav class="navbar">
+        <ul class="navbar-nav">
+          <li class="nav-item"><a class="nav-link active" href="index.html">Home</a></li>
+          <li class="nav-item"><a class="nav-link" href="activity.html">View the Pin</a></li>
+          <li class="nav-item"><a class="nav-link" href="shop.html">Store</a></li>
+          <li class="nav-item"><a class="nav-link" href="guide.html">Instructions</a></li>
+          <li class="nav-item"><a class="nav-link" href="testces.html">Test New Globe</a></li>
+        </ul>
+      </nav>
 
-    <!-- Custom Popup Element (for entity click) -->
-    <div id="customPopup"></div>
+      <!-- Filter button: show my pins only vs. show all pins -->
+      <button class="btn btn-outline-primary w-100 mt-3" id="toggleMyPinsBtn">
+        Show My Pins Only
+      </button>
 
-    <!-- Main Modal for Pin Creation -->
-    <div class="modal fade" id="pinModal" tabindex="-1">
-      <div class="modal-dialog">
-        <div class="modal-content" style="background-color: rgba(0,0,0,0.95); border: 1px solid #00ffff;">
-          <div class="modal-header">
-            <h5 class="modal-title">Add Pin</h5>
-            <button class="btn-close" data-bs-dismiss="modal"></button>
+      <button class="btn btn-danger w-100 mt-3" id="logoutBtn">
+        Log Out
+      </button>
+
+      <h6 class="mt-4">Search Pins</h6>
+      <form id="searchForm">
+        <input type="text" class="form-control mb-2" id="searchInput" placeholder="Search by description">
+        <button type="submit" class="btn btn-primary w-100">Search</button>
+      </form>
+
+      <h6 class="mt-4">Add a New Pin</h6>
+      <form id="pinForm" class="blue-gradient-form">
+        <div class="mb-2">
+          <label for="latitude" class="form-label">Latitude</label>
+          <input type="number" class="form-control" id="latitude" required>
+        </div>
+        <div class="mb-2">
+          <label for="longitude" class="form-label">Longitude</label>
+          <input type="number" class="form-control" id="longitude" required>
+        </div>
+        <div class="mb-2">
+          <label for="description" class="form-label">Description</label>
+          <input type="text" class="form-control" id="description" required>
+        </div>
+        <button type="submit" class="btn btn-success w-100">Add Pin</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main Modal for Pin Creation -->
+  <div class="modal fade" id="pinModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content" style="background-color: rgba(0,0,0,0.95); border: 1px solid #00ffff;">
+        <div class="modal-header">
+          <h5 class="modal-title">Add Pin</h5>
+          <button class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+
+          <div id="modalChoice" class="text-center">
+            <p>Select Pin Type:</p>
+            <button class="btn btn-outline-primary mb-2" id="modalBtnSimple">Pin Event</button>
+            <button class="btn btn-outline-secondary mb-2" id="modalBtnDetailed">Pin Mood</button>
+            <button class="btn btn-outline-success mb-2" id="modalBtnShop">Pin Shop Item</button>
           </div>
-          <div class="modal-body">
-            <div id="modalChoice" class="text-center">
-              <p>Select Pin Type:</p>
-              <button class="btn btn-outline-primary mb-2" id="modalBtnSimple">Pin Event</button>
-              <button class="btn btn-outline-secondary mb-2" id="modalBtnDetailed">Pin Mood</button>
-              <button class="btn btn-outline-success mb-2" id="modalBtnShop">Pin Shop Item</button>
-            </div>
-            <!-- Event Pin Form -->
-            <form id="simpleModalForm" class="d-none blue-gradient-form">
-              <label for="modalTitleSimple" class="form-label">Title</label>
-              <input type="text" class="form-control mb-2" id="modalTitleSimple" required>
-              <label for="modalDescSimple" class="form-label">Description</label>
-              <input type="text" class="form-control mb-2" id="modalDescSimple" required>
-              <label for="modalSongEvt" class="form-label">Song/Audio/Video Link (Optional)</label>
-              <input type="url" class="form-control mb-2" id="modalSongEvt" placeholder="https://...">
-              <button type="button" class="btn btn-outline-secondary mb-2" id="uploadEventBtn">Upload Event Image</button>
-              <input type="hidden" id="modalImageSimple">
-              <label for="modalLatSimple" class="form-label">Latitude</label>
-              <input type="number" class="form-control mb-2" id="modalLatSimple" readonly>
-              <label for="modalLngSimple" class="form-label">Longitude</label>
-              <input type="number" class="form-control mb-2" id="modalLngSimple" readonly>
-              <button type="submit" class="btn btn-primary w-100">Save Event Pin</button>
-              <button type="button" class="btn btn-link mt-2" id="backFromSimpleModal">← Back</button>
-            </form>
-            <!-- Mood Pin Form -->
-            <form id="detailedModalForm" class="d-none blue-gradient-form">
-              <label for="modalTitleDet" class="form-label">Title</label>
-              <input type="text" class="form-control mb-2" id="modalTitleDet" required>
-              <label for="modalDescDet" class="form-label">Description</label>
-              <textarea class="form-control mb-2" id="modalDescDet" rows="2" required></textarea>
-              <label for="modalSongDet" class="form-label">Song/Video Link (Optional)</label>
-              <input type="url" class="form-control mb-2" id="modalSongDet" placeholder="https://...">
-              <label for="modalLatDet" class="form-label">Latitude</label>
-              <input type="number" class="form-control mb-2" id="modalLatDet" readonly>
-              <label for="modalLngDet" class="form-label">Longitude</label>
-              <input type="number" class="form-control mb-2" id="modalLngDet" readonly>
-              <button type="submit" class="btn btn-primary w-100">Save Mood Pin</button>
-              <button type="button" class="btn btn-link mt-2" id="backFromDetailedModal">← Back</button>
-            </form>
-            <!-- Shop Pin Form -->
-            <form id="shopModalForm" class="d-none blue-gradient-form">
-              <label for="modalTitleShop" class="form-label">Title</label>
-              <input type="text" class="form-control mb-2" id="modalTitleShop" required>
-              <label for="modalDescShop" class="form-label">Description</label>
-              <textarea class="form-control mb-2" id="modalDescShop" rows="2" required></textarea>
-              <button type="button" class="btn btn-outline-secondary mb-2" id="uploadShopBtn">Upload Shop Image</button>
-              <input type="hidden" id="modalImageShop">
-              <label for="modalNumberShop" class="form-label">Quantity</label>
-              <input type="number" class="form-control mb-2" id="modalNumberShop" placeholder="Quantity" required>
-              <label for="modalLinkShop" class="form-label">Link</label>
-              <input type="url" class="form-control mb-2" id="modalLinkShop" placeholder="Link" required>
-              <label for="modalLatShop" class="form-label">Latitude</label>
-              <input type="number" class="form-control mb-2" id="modalLatShop" readonly>
-              <label for="modalLngShop" class="form-label">Longitude</label>
-              <input type="number" class="form-control mb-2" id="modalLngShop" readonly>
-              <button type="submit" class="btn btn-success w-100">Save Shop Item</button>
-              <button type="button" class="btn btn-link mt-2" id="backFromShopModal">← Back</button>
-            </form>
-          </div>
+
+          <!-- Event Pin Form -->
+          <form id="simpleModalForm" class="d-none blue-gradient-form">
+            <label for="modalTitleSimple" class="form-label">Title</label>
+            <input type="text" class="form-control mb-2" id="modalTitleSimple" required>
+            <label for="modalDescSimple" class="form-label">Description</label>
+            <input type="text" class="form-control mb-2" id="modalDescSimple" required>
+            <!-- New: Song/Audio link for event pins -->
+            <label for="modalSongEvt" class="form-label">Song/Audio/Video Link (Optional)</label>
+            <input type="url" class="form-control mb-2" id="modalSongEvt" placeholder="https://...">
+            <button type="button" class="btn btn-outline-secondary mb-2" id="uploadEventBtn">Upload Event Image</button>
+            <input type="hidden" id="modalImageSimple">
+            <label for="modalLatSimple" class="form-label">Latitude</label>
+            <input type="number" class="form-control mb-2" id="modalLatSimple" readonly>
+            <label for="modalLngSimple" class="form-label">Longitude</label>
+            <input type="number" class="form-control mb-2" id="modalLngSimple" readonly>
+            <button type="submit" class="btn btn-primary w-100">Save Event Pin</button>
+            <button type="button" class="btn btn-link mt-2" id="backFromSimpleModal">← Back</button>
+          </form>
+
+          <!-- Mood Pin Form -->
+          <form id="detailedModalForm" class="d-none blue-gradient-form">
+            <label for="modalTitleDet" class="form-label">Title</label>
+            <input type="text" class="form-control mb-2" id="modalTitleDet" required>
+            <label for="modalDescDet" class="form-label">Description</label>
+            <textarea class="form-control mb-2" id="modalDescDet" rows="2" required></textarea>
+            <label for="modalSongDet" class="form-label">Song/Video Link (Optional)</label>
+            <input type="url" class="form-control mb-2" id="modalSongDet" placeholder="https://...">
+            <label for="modalLatDet" class="form-label">Latitude</label>
+            <input type="number" class="form-control mb-2" id="modalLatDet" readonly>
+            <label for="modalLngDet" class="form-label">Longitude</label>
+            <input type="number" class="form-control mb-2" id="modalLngDet" readonly>
+            <button type="submit" class="btn btn-primary w-100">Save Mood Pin</button>
+            <button type="button" class="btn btn-link mt-2" id="backFromDetailedModal">← Back</button>
+          </form>
+
+          <!-- Shop Pin Form -->
+          <form id="shopModalForm" class="d-none blue-gradient-form">
+            <label for="modalTitleShop" class="form-label">Title</label>
+            <input type="text" class="form-control mb-2" id="modalTitleShop" required>
+            <label for="modalDescShop" class="form-label">Description</label>
+            <textarea class="form-control mb-2" id="modalDescShop" rows="2" required></textarea>
+            <button type="button" class="btn btn-outline-secondary mb-2" id="uploadShopBtn">Upload Shop Image</button>
+            <input type="hidden" id="modalImageShop">
+            <label for="modalNumberShop" class="form-label">Quantity</label>
+            <input type="number" class="form-control mb-2" id="modalNumberShop" placeholder="Quantity" required>
+            <label for="modalLinkShop" class="form-label">Link</label>
+            <input type="url" class="form-control mb-2" id="modalLinkShop" placeholder="Link" required>
+            <label for="modalLatShop" class="form-label">Latitude</label>
+            <input type="number" class="form-control mb-2" id="modalLatShop" readonly>
+            <label for="modalLngShop" class="form-label">Longitude</label>
+            <input type="number" class="form-control mb-2" id="modalLngShop" readonly>
+            <button type="submit" class="btn btn-success w-100">Save Shop Item</button>
+            <button type="button" class="btn btn-link mt-2" id="backFromShopModal">← Back</button>
+          </form>
+
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- Cesium JS -->
-    <script src="https://cesium.com/downloads/cesiumjs/releases/1.100/Build/Cesium/Cesium.js" crossorigin=""></script>
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- WebGL Earth & Bootstrap JS -->
+  <script src="https://www.webglearth.com/v2/api.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- Firebase and Custom JavaScript -->
-    <script type="module">
-      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-      import { getDatabase, ref, push, set, onValue, get, update, remove } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
-      import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+  <!-- Firebase v10+ -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getDatabase, ref, push, set, onValue, get, update, remove } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 
-      // Firebase configuration
-      const firebaseConfig = {
-        apiKey: "AIzaSyADk7if-797jFI3Y3IUCnCXFSlOsFmX_3k",
-        authDomain: "spoton-cit481.firebaseapp.com",
-        databaseURL: "https://spoton-cit481-default-rtdb.firebaseio.com",
-        projectId: "spoton-cit481",
-        storageBucket: "spoton-cit481.appspot.com",
-        messagingSenderId: "753873898041",
-        appId: "1:753873898041:web:bde5e8f86aea63b175dbe8"
-      };
-      const app = initializeApp(firebaseConfig);
-      const db = getDatabase(app);
-      const auth = getAuth(app);
+    const firebaseConfig = {
+      apiKey: "AIzaSyADk7if-797jFI3Y3IUCnCXFSlOsFmX_3k",
+      authDomain: "spoton-cit481.firebaseapp.com",
+      databaseURL: "https://spoton-cit481-default-rtdb.firebaseio.com",
+      projectId: "spoton-cit481",
+      storageBucket: "spoton-cit481.appspot.com",
+      messagingSenderId: "753873898041",
+      appId: "1:753873898041:web:bde5e8f86aea63b175dbe8"
+    };
 
-      let currentUser = null;
-      let eventImageUrl = "";
-      let shopImageUrl = "";
-      let showOnlyMyPins = false;
-      let markersList = [];
-      let editingPinId = null;
-      let editingPinType = null;
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
 
-      // Initialize Cesium Viewer with the default infoBox disabled so we can use our own modal popup
-      Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI1ODgwZDk4YS1kNmM2LTQyMmUtYmU4MS00OWUyOTgxYjg3MWMiLCJpZCI6Mjk0MzMxLCJpYXQiOjE3NDQ3MjY5MDN9.GiksKrwslZbSBi62HqVdBBrPQKvSQwF5TT5KmmUPMRQ';
-      const bingAerialProvider = new Cesium.IonImageryProvider({ assetId: 2 });
-      const ellipsoidTerrain = new Cesium.EllipsoidTerrainProvider();
-      const viewer = new Cesium.Viewer('cesiumContainer', {
-        imageryProvider: bingAerialProvider,
-        terrainProvider: ellipsoidTerrain,
-        baseLayerPicker: false,
-        animation: false,
-        timeline: false,
-        infoBox: false
-      });
-      viewer.camera.flyTo({
-        destination: Cesium.Cartesian3.fromDegrees(-95, 40, 2500000)
-      });
+    let currentUser = null;
+    let eventImageUrl = "";
+    let shopImageUrl = "";
+    let showOnlyMyPins = false;
+    const modal = new bootstrap.Modal(document.getElementById("pinModal"));
 
-      // Set additional scene properties to ensure the globe is visible
-      viewer.scene.globe.show = true;
-      viewer.scene.globe.translucency.enabled = false;
-      viewer.scene.globe.baseColor = Cesium.Color.DARK_GRAY;
-      viewer.scene.backgroundColor = Cesium.Color.BLACK;
-      viewer.scene.globe.enableLighting = false;
+    let markersList = [];
+    let editingPinId = null;
+    let editingPinType = null;
 
-      // Remove the double-click event handler (we now use the dedicated modal button)
-      // and remove any other conflicting click handlers if necessary.
-
-      // Custom Popup functions (for when an entity is clicked)
-      function showCustomPopup(screenPosition, content) {
-        const popup = document.getElementById("customPopup");
-        popup.innerHTML = content;
-        popup.style.left = (screenPosition.x + 10) + "px";
-        popup.style.top = (screenPosition.y + 10) + "px";
-        popup.style.display = "block";
+    // Auth check
+    onAuthStateChanged(auth, user => {
+      if (!user) {
+        window.location.href = "user/userlogin.html";
+        return;
       }
-      function hideCustomPopup() {
-        document.getElementById("customPopup").style.display = "none";
-      }
+      currentUser = user;
+      loadPinsFromFirebase(); // by default, loads all pins
+    });
 
-      // Left-click to show custom popup (optional, for viewing entity details)
-      const clickHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-      clickHandler.setInputAction((movement) => {
-        const pickedObject = viewer.scene.pick(movement.position);
-        if (Cesium.defined(pickedObject) && Cesium.defined(pickedObject.id)) {
-          const content = pickedObject.id.description || "<div>No content</div>";
-          showCustomPopup(movement.position, content);
+    // Create the globe
+    const earth = new WE.map("earth_div");
+    earth.setView([0, 0], 2);
+    WE.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+        attribution: "Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap (CC-BY-SA)",
+        subdomains: "abc"
+    }).addTo(earth);
+      
+
+    // Double-click detection
+    let lastClickTime = 0;
+    const clickThreshold = 350; // ms
+
+    earth.on("click", event => {
+      const now = Date.now();
+      if (now - lastClickTime < clickThreshold) {
+        // It's a double-click
+        handleDoubleClick(event);
+      }
+      lastClickTime = now;
+    });
+
+    function handleDoubleClick(event) {
+      if (event.latlng) {
+        const { lat, lng } = event.latlng;
+        ["Simple", "Det", "Shop"].forEach(type => {
+          document.getElementById(`modalLat${type}`).value = lat.toFixed(5);
+          document.getElementById(`modalLng${type}`).value = lng.toFixed(5);
+        });
+        // Indicate new pin creation
+        editingPinId = null;
+        editingPinType = null;
+        modal.show();
+      }
+    }
+
+    // Filter button
+    const toggleMyPinsBtn = document.getElementById("toggleMyPinsBtn");
+    toggleMyPinsBtn.addEventListener("click", () => {
+      showOnlyMyPins = !showOnlyMyPins;
+      toggleMyPinsBtn.textContent = showOnlyMyPins ? "Show All Pins" : "Show My Pins Only";
+      loadPinsFromFirebase(); // reload with filter
+    });
+
+    // Logout button
+    const logoutBtn = document.getElementById("logoutBtn");
+    logoutBtn.addEventListener("click", () => {
+      signOut(auth)
+        .then(() => {
+          // Signed out successfully
+          window.location.href = "../index.html";
+        })
+        .catch(err => {
+          console.error("Sign-out error:", err);
+          alert("Could not sign out. See console.");
+        });
+    });
+
+    /* ------------------------------------------------------------------
+       Load existing pins from Firebase
+    ------------------------------------------------------------------ */
+    function loadPinsFromFirebase() {
+      // Remove existing markers
+      markersList.forEach(m => m.removeFrom(earth));
+      markersList = [];
+
+      const path = showOnlyMyPins ? `pins/${currentUser.uid}` : "pins";
+      onValue(ref(db, path), snapshot => {
+        // Clear out old markers again on each update
+        markersList.forEach(m => m.removeFrom(earth));
+        markersList = [];
+
+        const data = snapshot.val();
+        if (!data) return;
+
+        if (showOnlyMyPins) {
+          // data = { eventPins: {...}, moodPins: {...}, shopPins: {...} }
+          loadUserPinTypes(currentUser.uid, data);
         } else {
-          hideCustomPopup();
+          // data = { userId1: {...}, userId2: {...}, ... }
+          Object.entries(data).forEach(([userId, userData]) => {
+            loadUserPinTypes(userId, userData);
+          });
         }
-      }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-
-      // Offcanvas form event for manually adding a new pin
-      document.getElementById("pinForm").addEventListener("submit", async e => {
-        e.preventDefault();
-        const lat = parseFloat(document.getElementById("latitude").value);
-        const lon = parseFloat(document.getElementById("longitude").value);
-        const description = document.getElementById("description").value;
-        // Save as a basic event pin
-        await saveEventPin(lat, lon, "Pin", description, "", "");
       });
+    }
 
-      // Firebase Authentication check
-      onAuthStateChanged(auth, user => {
-        if (!user) {
-          window.location.href = "user/userlogin.html";
-          return;
-        }
-        currentUser = user;
-        loadPinsFromFirebase();
-      });
+    function loadUserPinTypes(userId, userData) {
+      ["eventPins", "moodPins", "shopPins"].forEach(pinType => {
+        const group = userData[pinType];
+        if (!group) return;
 
-      // Helper to generate embeddable content for media links
-      function generateEmbedContent(link) {
-        if (!link) return "";
-        if (link.includes("open.spotify.com/track/")) {
-          const embedUrl = link.replace("open.spotify.com/track/", "open.spotify.com/embed/track/");
-          return `<iframe class="pin-iframe" src="${embedUrl}" allow="encrypted-media" allowfullscreen></iframe>`;
-        }
-        if (link.includes("youtube.com/watch?v=") || link.includes("youtu.be/")) {
-          let videoId = "";
-          if (link.includes("watch?v=")) {
-            videoId = link.split("watch?v=")[1].split("&")[0];
-          } else {
-            videoId = link.split("youtu.be/")[1];
+        // For each pin
+        Object.entries(group).forEach(([pinId, pin]) => {
+          if (pin.geolocation) {
+            const marker = addPin(
+              pin.geolocation.lat,
+              pin.geolocation.lng,
+              pin,
+              userId,
+              pinId,
+              pinType
+            );
+            markersList.push(marker);
           }
-          const embedUrl = `https://www.youtube.com/embed/${videoId}`;
-          return `<iframe class="pin-iframe" src="${embedUrl}" allowfullscreen></iframe>`;
+        });
+      });
+    }
+
+    /* ------------------------------------------------------------------
+       Convert user link to an embeddable snippet
+    ------------------------------------------------------------------ */
+    function generateEmbedContent(link) {
+      if (!link) return "";
+      // Spotify
+      if (link.includes("open.spotify.com/track/")) {
+        const embedUrl = link.replace("open.spotify.com/track/", "open.spotify.com/embed/track/");
+        return `<iframe class="pin-iframe" src="${embedUrl}" allow="encrypted-media" allowfullscreen></iframe>`;
+      }
+      // YouTube
+      if (link.includes("youtube.com/watch?v=") || link.includes("youtu.be/")) {
+        let videoId = "";
+        if (link.includes("watch?v=")) {
+          videoId = link.split("watch?v=")[1];
+          if (videoId.includes("&")) videoId = videoId.split("&")[0];
+        } else {
+          videoId = link.split("youtu.be/")[1];
         }
-        if (link.endsWith(".mp4")) {
-          return `<video class="pin-video" src="${link}" controls></video>`;
-        }
-        if (link.endsWith(".mp3")) {
-          return `<audio class="pin-audio" src="${link}" controls></audio>`;
-        }
-        return `<iframe class="pin-iframe" src="${link}" allowfullscreen></iframe>`;
+        const embedUrl = `https://www.youtube.com/embed/${videoId}`;
+        return `<iframe class="pin-iframe" src="${embedUrl}" allowfullscreen></iframe>`;
+      }
+      // MP4 or MP3
+      if (link.endsWith(".mp4")) {
+        return `<video class="pin-video" src="${link}" controls></video>`;
+      }
+      if (link.endsWith(".mp3")) {
+        return `<audio class="pin-audio" src="${link}" controls></audio>`;
+      }
+      // fallback
+      return `<iframe class="pin-iframe" src="${link}" allowfullscreen></iframe>`;
+    }
+
+    /* ------------------------------------------------------------------
+       Create a marker + popup (including Edit/Delete if user is owner)
+    ------------------------------------------------------------------ */
+    function addPin(lat, lng, pinData, userId, pinId, pinType) {
+      const marker = WE.marker([lat, lng]).addTo(earth);
+
+      let content = `<div class="pin-popup-content">`;
+
+      // Title/description
+      content += `
+        <strong>Title:</strong> ${pinData.title || "Untitled"}<br>
+        <strong>Description:</strong> ${pinData.description || ""}
+      `;
+
+      // If there's a link
+      if (pinData.songLink) {
+        content += "<br>" + generateEmbedContent(pinData.songLink);
       }
 
-      // Function to add a pin (billboard) to Cesium with a custom HTML description
-      function addPinCesium(lat, lon, pinData, userId, pinId, pinType) {
-        let content = `<div class="pin-popup-content">
-          <strong>Title:</strong> ${pinData.title || "Untitled"}<br>
-          <strong>Description:</strong> ${pinData.description || ""}`;
-        if (pinData.songLink) {
-          content += "<br>" + generateEmbedContent(pinData.songLink);
-        }
-        if (pinData.imageUrl) {
-          content += `<br><img class="pin-image" src="${pinData.imageUrl}" alt="Pin Image">`;
-        }
+      // If there's an image
+      if (pinData.imageUrl) {
+        content += `<br><img class="pin-image" src="${pinData.imageUrl}" alt="Pin Image">`;
+      }
+
+      // Likes / Dislikes (buttons still here for owners)
+      const likesCount = pinData.likes || 0;
+      const dislikesCount = pinData.dislikes || 0;
+      content += `
+        <br>
+        <button class="like-button btn btn-outline-light btn-sm"
+                data-user-id="${userId}"
+                data-pin-type="${pinType}"
+                data-pin-id="${pinId}">
+          Like (${likesCount})
+        </button>
+
+        <button class="dislike-button btn btn-outline-light btn-sm"
+                data-user-id="${userId}"
+                data-pin-type="${pinType}"
+                data-pin-id="${pinId}">
+          Dislike (${dislikesCount})
+        </button>
+      `;
+
+      // If current user is the owner => show Edit & Delete
+      if (userId === currentUser.uid) {
         content += `
           <br>
-          <button class="btn btn-outline-light btn-sm" onclick="likePin('${userId}','${pinType}','${pinId}')">
-            Like (${pinData.likes || 0})
+          <button class="edit-button btn btn-warning btn-sm mt-2"
+                  data-user-id="${userId}"
+                  data-pin-type="${pinType}"
+                  data-pin-id="${pinId}">
+            Edit
           </button>
-          <button class="btn btn-outline-light btn-sm" onclick="dislikePin('${userId}','${pinType}','${pinId}')">
-            Dislike (${pinData.dislikes || 0})
-          </button>`;
+          <button class="delete-button btn btn-danger btn-sm mt-2"
+                  data-user-id="${userId}"
+                  data-pin-type="${pinType}"
+                  data-pin-id="${pinId}">
+            Delete
+          </button>
+        `;
+      }
+
+      content += `</div>`;
+
+      marker.bindPopup(content);
+      return marker;
+    }
+
+    /* ------------------------------------------------------------------
+       Global click listener for Like, Dislike, Edit, Delete
+    ------------------------------------------------------------------ */
+    document.addEventListener("click", async e => {
+      if (e.target.classList.contains("like-button")) {
+        const { userId, pinType, pinId } = getPinIdentifiers(e.target);
+        await incrementFieldInPin(userId, pinType, pinId, "likes");
+      }
+      else if (e.target.classList.contains("dislike-button")) {
+        const { userId, pinType, pinId } = getPinIdentifiers(e.target);
+        await incrementFieldInPin(userId, pinType, pinId, "dislikes");
+      }
+      else if (e.target.classList.contains("delete-button")) {
+        const { userId, pinType, pinId } = getPinIdentifiers(e.target);
         if (userId === currentUser.uid) {
-          content += `
-            <br>
-            <button class="btn btn-warning btn-sm mt-2" onclick="editPin('${userId}','${pinType}','${pinId}')">Edit</button>
-            <button class="btn btn-danger btn-sm mt-2" onclick="deletePin('${userId}','${pinType}','${pinId}')">Delete</button>
-          `;
-        }
-        content += `</div>`;
-        const entity = viewer.entities.add({
-          position: Cesium.Cartesian3.fromDegrees(lon, lat),
-          billboard: {
-            image: 'https://cdn-icons-png.flaticon.com/512/1673/1673221.png',
-            scale: 0.075, // Reduced pin size
-            verticalOrigin: Cesium.VerticalOrigin.BOTTOM
-          },
-          label: {
-            text: pinData.title || "Untitled",
-            font: '14pt sans-serif',
-            fillColor: Cesium.Color.WHITE,
-            outlineColor: Cesium.Color.BLACK,
-            outlineWidth: 2,
-            verticalOrigin: Cesium.VerticalOrigin.TOP,
-            pixelOffset: new Cesium.Cartesian2(0, -30)
-          },
-          description: content
-        });
-        return entity;
-      }
-
-      // Load pins from Firebase and add them to Cesium
-      function loadPinsFromFirebase() {
-        markersList.forEach(entity => viewer.entities.remove(entity));
-        markersList = [];
-        const path = showOnlyMyPins ? `pins/${currentUser.uid}` : "pins";
-        onValue(ref(db, path), snapshot => {
-          markersList.forEach(entity => viewer.entities.remove(entity));
-          markersList = [];
-          const data = snapshot.val();
-          if (!data) return;
-          if (showOnlyMyPins) {
-            loadUserPinTypes(currentUser.uid, data);
-          } else {
-            Object.entries(data).forEach(([userId, userData]) => {
-              loadUserPinTypes(userId, userData);
-            });
+          if (confirm("Are you sure you want to delete this pin?")) {
+            await deletePin(userId, pinType, pinId);
           }
-        });
+        }
       }
-      function loadUserPinTypes(userId, userData) {
-        ["eventPins", "moodPins", "shopPins"].forEach(pinType => {
-          const group = userData[pinType];
-          if (!group) return;
-          Object.entries(group).forEach(([pinId, pin]) => {
-            if (pin.geolocation) {
-              const entity = addPinCesium(pin.geolocation.lat, pin.geolocation.lng, pin, userId, pinId, pinType);
-              markersList.push(entity);
-            }
-          });
-        });
+      else if (e.target.classList.contains("edit-button")) {
+        const { userId, pinType, pinId } = getPinIdentifiers(e.target);
+        if (userId === currentUser.uid) {
+          await editPin(userId, pinType, pinId);
+        }
       }
+    });
 
-      // Global functions for interactive actions – accessible from popup buttons
-      window.likePin = async function(userId, pinType, pinId) {
-        const pinRef = ref(db, `pins/${userId}/${pinType}/${pinId}`);
-        const snapshot = await get(pinRef);
-        if (snapshot.exists()) {
-          const pinData = snapshot.val();
-          const currentLikes = pinData.likes || 0;
-          await update(pinRef, { likes: currentLikes + 1 });
-        }
+    function getPinIdentifiers(btn) {
+      return {
+        userId: btn.getAttribute("data-user-id"),
+        pinType: btn.getAttribute("data-pin-type"),
+        pinId: btn.getAttribute("data-pin-id")
       };
-      window.dislikePin = async function(userId, pinType, pinId) {
-        const pinRef = ref(db, `pins/${userId}/${pinType}/${pinId}`);
-        const snapshot = await get(pinRef);
-        if (snapshot.exists()) {
-          const pinData = snapshot.val();
-          const currentDislikes = pinData.dislikes || 0;
-          await update(pinRef, { dislikes: currentDislikes + 1 });
-        }
-      };
-      window.deletePin = async function(userId, pinType, pinId) {
-        if (userId === currentUser.uid && confirm("Are you sure you want to delete this pin?")) {
-          const pinRef = ref(db, `pins/${userId}/${pinType}/${pinId}`);
-          await remove(pinRef);
-          loadPinsFromFirebase();
-        }
-      };
-      window.editPin = async function(userId, pinType, pinId) {
-        const pinRef = ref(db, `pins/${userId}/${pinType}/${pinId}`);
-        const snapshot = await get(pinRef);
-        if (!snapshot.exists()) return;
+    }
+
+    async function incrementFieldInPin(userId, pinType, pinId, fieldName) {
+      const pinRef = ref(db, `pins/${userId}/${pinType}/${pinId}`);
+      const snapshot = await get(pinRef);
+      if (snapshot.exists()) {
         const pinData = snapshot.val();
-        editingPinId = pinId;
-        editingPinType = pinType;
-        if (pinType === "eventPins") {
-          document.getElementById("modalTitleSimple").value = pinData.title || "";
-          document.getElementById("modalDescSimple").value = pinData.description || "";
-          document.getElementById("modalSongEvt").value = pinData.songLink || "";
-          document.getElementById("modalLatSimple").value = pinData.geolocation.lat;
-          document.getElementById("modalLngSimple").value = pinData.geolocation.lng;
-          eventImageUrl = pinData.imageUrl || "";
-          hideForms();
-          document.getElementById("simpleModalForm").classList.remove("d-none");
-        } else if (pinType === "moodPins") {
-          document.getElementById("modalTitleDet").value = pinData.title || "";
-          document.getElementById("modalDescDet").value = pinData.description || "";
-          document.getElementById("modalSongDet").value = pinData.songLink || "";
-          document.getElementById("modalLatDet").value = pinData.geolocation.lat;
-          document.getElementById("modalLngDet").value = pinData.geolocation.lng;
-          hideForms();
-          document.getElementById("detailedModalForm").classList.remove("d-none");
-        } else if (pinType === "shopPins") {
-          document.getElementById("modalTitleShop").value = pinData.title || "";
-          document.getElementById("modalDescShop").value = pinData.description || "";
-          document.getElementById("modalNumberShop").value = pinData.quantity || "";
-          document.getElementById("modalLinkShop").value = pinData.link || "";
-          document.getElementById("modalLatShop").value = pinData.geolocation.lat;
-          document.getElementById("modalLngShop").value = pinData.geolocation.lng;
-          shopImageUrl = pinData.imageUrl || "";
-          hideForms();
-          document.getElementById("shopModalForm").classList.remove("d-none");
-        }
-        const pinModalEl = document.getElementById("pinModal");
-        const modal = new bootstrap.Modal(pinModalEl);
-        modal.show();
-      };
-      async function updatePin(pinType, pinId, updatedData) {
-        const pinRef = ref(db, `pins/${currentUser.uid}/${pinType}/${pinId}`);
-        return update(pinRef, updatedData);
+        const currentValue = pinData[fieldName] || 0;
+        await update(pinRef, { [fieldName]: currentValue + 1 });
       }
+    }
 
-      // Cloudinary upload handler (assumes Cloudinary widget is available)
-      function openCloudinary(callback) {
-        cloudinary.createUploadWidget({
-          cloudName: "djhoct1eh",
-          uploadPreset: "ml_default"
-        }, (err, result) => {
-          if (!err && result && result.event === "success") {
-            callback(result.info.secure_url);
-          }
-        }).open();
-      }
-      document.getElementById("uploadEventBtn").addEventListener("click", () => {
-        openCloudinary(url => {
-          eventImageUrl = url;
-          alert("Event image uploaded");
-        });
-      });
-      document.getElementById("uploadShopBtn").addEventListener("click", () => {
-        openCloudinary(url => {
-          shopImageUrl = url;
-          alert("Shop image uploaded");
-        });
-      });
+    /* ------------------------------------------------------------------
+       Delete Pin
+    ------------------------------------------------------------------ */
+    async function deletePin(userId, pinType, pinId) {
+      const pinRef = ref(db, `pins/${userId}/${pinType}/${pinId}`);
+      await remove(pinRef);
+      loadPinsFromFirebase();
+    }
 
-      // Modal navigation buttons
-      document.getElementById("modalBtnSimple").onclick = () => {
+    /* ------------------------------------------------------------------
+       Edit Pin
+    ------------------------------------------------------------------ */
+    async function editPin(userId, pinType, pinId) {
+      const pinRef = ref(db, `pins/${userId}/${pinType}/${pinId}`);
+      const snapshot = await get(pinRef);
+      if (!snapshot.exists()) return;
+      const pinData = snapshot.val();
+
+      editingPinId = pinId;
+      editingPinType = pinType;
+
+      if (pinType === "eventPins") {
+        document.getElementById("modalTitleSimple").value = pinData.title || "";
+        document.getElementById("modalDescSimple").value = pinData.description || "";
+        document.getElementById("modalSongEvt").value = pinData.songLink || "";
+        document.getElementById("modalLatSimple").value = pinData.geolocation.lat;
+        document.getElementById("modalLngSimple").value = pinData.geolocation.lng;
+        eventImageUrl = pinData.imageUrl || "";
         hideForms();
         document.getElementById("simpleModalForm").classList.remove("d-none");
-      };
-      document.getElementById("modalBtnDetailed").onclick = () => {
+      }
+      else if (pinType === "moodPins") {
+        document.getElementById("modalTitleDet").value = pinData.title || "";
+        document.getElementById("modalDescDet").value = pinData.description || "";
+        document.getElementById("modalSongDet").value = pinData.songLink || "";
+        document.getElementById("modalLatDet").value = pinData.geolocation.lat;
+        document.getElementById("modalLngDet").value = pinData.geolocation.lng;
         hideForms();
         document.getElementById("detailedModalForm").classList.remove("d-none");
-      };
-      document.getElementById("modalBtnShop").onclick = () => {
+      }
+      else if (pinType === "shopPins") {
+        document.getElementById("modalTitleShop").value = pinData.title || "";
+        document.getElementById("modalDescShop").value = pinData.description || "";
+        document.getElementById("modalNumberShop").value = pinData.quantity || "";
+        document.getElementById("modalLinkShop").value = pinData.link || "";
+        document.getElementById("modalLatShop").value = pinData.geolocation.lat;
+        document.getElementById("modalLngShop").value = pinData.geolocation.lng;
+        shopImageUrl = pinData.imageUrl || "";
         hideForms();
         document.getElementById("shopModalForm").classList.remove("d-none");
-      };
-      document.getElementById("backFromSimpleModal").onclick =
-        document.getElementById("backFromDetailedModal").onclick =
-        document.getElementById("backFromShopModal").onclick = () => {
-          hideForms();
-          document.getElementById("modalChoice").classList.remove("d-none");
-        };
-      function hideForms() {
-        ["modalChoice", "simpleModalForm", "detailedModalForm", "shopModalForm"]
-          .forEach(id => document.getElementById(id).classList.add("d-none"));
       }
 
-      // Modal form submissions
-      document.getElementById("simpleModalForm").addEventListener("submit", async e => {
-        e.preventDefault();
-        const lat = parseFloat(document.getElementById("modalLatSimple").value);
-        const lon = parseFloat(document.getElementById("modalLngSimple").value);
-        const title = document.getElementById("modalTitleSimple").value;
-        const desc = document.getElementById("modalDescSimple").value;
-        const songLink = document.getElementById("modalSongEvt").value;
-        if (editingPinId && editingPinType === "eventPins") {
-          await updatePin("eventPins", editingPinId, {
-            title,
-            description: desc,
-            imageUrl: eventImageUrl,
-            songLink,
-            geolocation: { lat, lng: lon }
-          });
-        } else {
-          await saveEventPin(lat, lon, title, desc, eventImageUrl, songLink);
-        }
-        eventImageUrl = "";
-        editingPinId = null;
-        editingPinType = null;
-        document.getElementById("pinModal").querySelector(".btn-close").click();
-      });
-      document.getElementById("detailedModalForm").addEventListener("submit", async e => {
-        e.preventDefault();
-        const lat = parseFloat(document.getElementById("modalLatDet").value);
-        const lon = parseFloat(document.getElementById("modalLngDet").value);
-        const title = document.getElementById("modalTitleDet").value;
-        const desc = document.getElementById("modalDescDet").value;
-        const songLink = document.getElementById("modalSongDet").value;
-        if (editingPinId && editingPinType === "moodPins") {
-          await updatePin("moodPins", editingPinId, {
-            title,
-            description: desc,
-            songLink,
-            geolocation: { lat, lng: lon }
-          });
-        } else {
-          await saveMoodPin(lat, lon, title, desc, songLink);
-        }
-        editingPinId = null;
-        editingPinType = null;
-        document.getElementById("pinModal").querySelector(".btn-close").click();
-      });
-      document.getElementById("shopModalForm").addEventListener("submit", async e => {
-        e.preventDefault();
-        const lat = parseFloat(document.getElementById("modalLatShop").value);
-        const lon = parseFloat(document.getElementById("modalLngShop").value);
-        const title = document.getElementById("modalTitleShop").value;
-        const desc = document.getElementById("modalDescShop").value;
-        const quantity = document.getElementById("modalNumberShop").value;
-        const link = document.getElementById("modalLinkShop").value;
-        if (editingPinId && editingPinType === "shopPins") {
-          await updatePin("shopPins", editingPinId, {
-            title,
-            description: desc,
-            imageUrl: shopImageUrl,
-            quantity,
-            link,
-            geolocation: { lat, lng: lon }
-          });
-        } else {
-          await saveShopPin(lat, lon, title, desc, shopImageUrl, quantity, link);
-        }
-        shopImageUrl = "";
-        editingPinId = null;
-        editingPinType = null;
-        document.getElementById("pinModal").querySelector(".btn-close").click();
-      });
+      modal.show();
+    }
 
-      // Functions to save new pins to Firebase
-      function saveEventPin(lat, lng, title, desc, imageUrl = "", songLink = "") {
-        const refPath = ref(db, `pins/${currentUser.uid}/eventPins`);
-        return set(push(refPath), {
+    async function updatePin(pinType, pinId, updatedData) {
+      const pinRef = ref(db, `pins/${currentUser.uid}/${pinType}/${pinId}`);
+      return update(pinRef, updatedData);
+    }
+
+    /* ------------------------------------------------------------------
+       Cloudinary Upload Handlers
+    ------------------------------------------------------------------ */
+    function openCloudinary(callback) {
+      cloudinary.createUploadWidget({
+        cloudName: "djhoct1eh",
+        uploadPreset: "ml_default"
+      }, (err, result) => {
+        if (!err && result && result.event === "success") {
+          callback(result.info.secure_url);
+        }
+      }).open();
+    }
+
+    document.getElementById("uploadEventBtn").addEventListener("click", () => {
+      openCloudinary(url => {
+        eventImageUrl = url;
+        alert("Event image uploaded");
+      });
+    });
+
+    document.getElementById("uploadShopBtn").addEventListener("click", () => {
+      openCloudinary(url => {
+        shopImageUrl = url;
+        alert("Shop image uploaded");
+      });
+    });
+
+    /* ------------------------------------------------------------------
+       Form Submissions for Each Pin Type
+    ------------------------------------------------------------------ */
+    document.getElementById("simpleModalForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const lat = parseFloat(document.getElementById("modalLatSimple").value);
+      const lng = parseFloat(document.getElementById("modalLngSimple").value);
+      const title = document.getElementById("modalTitleSimple").value;
+      const desc = document.getElementById("modalDescSimple").value;
+      const songLink = document.getElementById("modalSongEvt").value;
+
+      if (editingPinId && editingPinType === "eventPins") {
+        await updatePin("eventPins", editingPinId, {
           title,
           description: desc,
-          imageUrl,
+          imageUrl: eventImageUrl,
           songLink,
-          likes: 0,
-          dislikes: 0,
-          geolocation: { lat, lng },
-          timestamp: Date.now()
+          geolocation: { lat, lng }
         });
+      } else {
+        await saveEventPin(lat, lng, title, desc, eventImageUrl, songLink);
       }
-      function saveMoodPin(lat, lng, title, desc, songLink = "") {
-        const refPath = ref(db, `pins/${currentUser.uid}/moodPins`);
-        return set(push(refPath), {
+      eventImageUrl = "";
+      editingPinId = null;
+      editingPinType = null;
+      modal.hide();
+    });
+
+    document.getElementById("detailedModalForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const lat = parseFloat(document.getElementById("modalLatDet").value);
+      const lng = parseFloat(document.getElementById("modalLngDet").value);
+      const title = document.getElementById("modalTitleDet").value;
+      const desc = document.getElementById("modalDescDet").value;
+      const songLink = document.getElementById("modalSongDet").value;
+
+      if (editingPinId && editingPinType === "moodPins") {
+        await updatePin("moodPins", editingPinId, {
           title,
           description: desc,
           songLink,
-          likes: 0,
-          dislikes: 0,
-          geolocation: { lat, lng },
-          timestamp: Date.now()
+          geolocation: { lat, lng }
         });
+      } else {
+        await saveMoodPin(lat, lng, title, desc, songLink);
       }
-      function saveShopPin(lat, lng, title, desc, imageUrl = "", quantity, link) {
-        const refPath = ref(db, `pins/${currentUser.uid}/shopPins`);
-        return set(push(refPath), {
+      editingPinId = null;
+      editingPinType = null;
+      modal.hide();
+    });
+
+    document.getElementById("shopModalForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const lat = parseFloat(document.getElementById("modalLatShop").value);
+      const lng = parseFloat(document.getElementById("modalLngShop").value);
+      const title = document.getElementById("modalTitleShop").value;
+      const desc = document.getElementById("modalDescShop").value;
+      const quantity = document.getElementById("modalNumberShop").value;
+      const link = document.getElementById("modalLinkShop").value;
+
+      if (editingPinId && editingPinType === "shopPins") {
+        await updatePin("shopPins", editingPinId, {
           title,
           description: desc,
-          imageUrl,
+          imageUrl: shopImageUrl,
           quantity,
           link,
-          likes: 0,
-          dislikes: 0,
-          geolocation: { lat, lng },
-          timestamp: Date.now()
+          geolocation: { lat, lng }
         });
+      } else {
+        await saveShopPin(lat, lng, title, desc, shopImageUrl, quantity, link);
       }
-    </script>
-  </body>
+      shopImageUrl = "";
+      editingPinId = null;
+      editingPinType = null;
+      modal.hide();
+    });
+
+    /* ------------------------------------------------------------------
+       Create New Pin Functions (include likes=0, dislikes=0)
+    ------------------------------------------------------------------ */
+    function saveEventPin(lat, lng, title, desc, imageUrl = "", songLink = "") {
+      const refPath = ref(db, `pins/${currentUser.uid}/eventPins`);
+      return set(push(refPath), {
+        title,
+        description: desc,
+        imageUrl,
+        songLink,
+        likes: 0,
+        dislikes: 0,
+        geolocation: { lat, lng },
+        timestamp: Date.now()
+      });
+    }
+
+    function saveMoodPin(lat, lng, title, desc, songLink = "") {
+      const refPath = ref(db, `pins/${currentUser.uid}/moodPins`);
+      return set(push(refPath), {
+        title,
+        description: desc,
+        songLink,
+        likes: 0,
+        dislikes: 0,
+        geolocation: { lat, lng },
+        timestamp: Date.now()
+      });
+    }
+
+    function saveShopPin(lat, lng, title, desc, imageUrl = "", quantity, link) {
+      const refPath = ref(db, `pins/${currentUser.uid}/shopPins`);
+      return set(push(refPath), {
+        title,
+        description: desc,
+        imageUrl,
+        quantity,
+        link,
+        likes: 0,
+        dislikes: 0,
+        geolocation: { lat, lng },
+        timestamp: Date.now()
+      });
+    }
+
+    /* ------------------------------------------------------------------
+       Modal Navigation
+    ------------------------------------------------------------------ */
+    document.getElementById("modalBtnSimple").onclick = () => {
+      hideForms();
+      document.getElementById("simpleModalForm").classList.remove("d-none");
+    };
+    document.getElementById("modalBtnDetailed").onclick = () => {
+      hideForms();
+      document.getElementById("detailedModalForm").classList.remove("d-none");
+    };
+    document.getElementById("modalBtnShop").onclick = () => {
+      hideForms();
+      document.getElementById("shopModalForm").classList.remove("d-none");
+    };
+    document.getElementById("backFromSimpleModal").onclick =
+    document.getElementById("backFromDetailedModal").onclick =
+    document.getElementById("backFromShopModal").onclick = () => {
+      hideForms();
+      document.getElementById("modalChoice").classList.remove("d-none");
+    };
+
+    function hideForms() {
+      ["modalChoice", "simpleModalForm", "detailedModalForm", "shopModalForm"]
+        .forEach(id => document.getElementById(id).classList.add("d-none"));
+    }
+  </script>
+</body>
 </html>
 
 
