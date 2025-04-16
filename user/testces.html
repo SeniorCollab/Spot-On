@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Cesium: Interactive Map with Editable Pins</title>
+  <title>Cesium: Interactive Map with Custom Popup & Editable Pins</title>
   <!-- Cesium CSS -->
   <link rel="stylesheet" href="https://cesium.com/downloads/cesiumjs/releases/1.100/Build/Cesium/Widgets/widgets.css" />
   <!-- Bootstrap CSS -->
@@ -10,14 +10,16 @@
   <!-- Tron-like font from Google Fonts -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap">
   <style>
+    /* Ensure the whole document and Cesium container are opaque and black */
     html, body {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
-      overflow: hidden;
+      background-color: #000;
       font-family: 'Orbitron', sans-serif;
       color: #00ffff;
+      overflow: hidden;
     }
     /* Background Video */
     #bgvideo {
@@ -30,7 +32,7 @@
       object-fit: cover;
       opacity: 1;
     }
-    /* Cesium Container */
+    /* Cesium Container – force an opaque background */
     #cesiumContainer {
       position: fixed;
       top: 0;
@@ -38,7 +40,11 @@
       width: 100%;
       height: 100%;
       z-index: 1;
-      background: #000;
+      background-color: #000 !important;
+    }
+    /* Ensure the Cesium canvas remains opaque */
+    #cesiumContainer canvas {
+      opacity: 1 !important;
     }
     /* Offcanvas Toggle (Hamburger) */
     #offcanvasToggle {
@@ -113,7 +119,21 @@
       border-radius: 10px;
       max-width: 300px;
     }
-    /* Button styles */
+    /* Custom Popup (for our entity click) – fully controlled via CSS */
+    #customPopup {
+      position: absolute;
+      background-color: #111;
+      color: #00ffff;
+      border: 2px solid #00ffff;
+      border-radius: 10px;
+      padding: 10px;
+      box-shadow: 0 0 10px #00ffff;
+      font-family: 'Orbitron', sans-serif;
+      z-index: 100;
+      display: none;
+      max-width: 300px;
+    }
+    /* Button Styles */
     .btn {
       font-family: 'Orbitron', sans-serif;
       text-transform: uppercase;
@@ -155,7 +175,7 @@
     .btn-success:hover {
       background-color: #33ff33;
     }
-    /* Embedded media elements */
+    /* Embedded Media Elements */
     .pin-iframe,
     .pin-video,
     .pin-audio {
@@ -241,6 +261,9 @@
 
   <!-- Cesium Map Container -->
   <div id="cesiumContainer"></div>
+
+  <!-- Custom Popup Element -->
+  <div id="customPopup"></div>
 
   <!-- Main Modal for Pin Creation -->
   <div class="modal fade" id="pinModal" tabindex="-1">
@@ -349,8 +372,8 @@
     let editingPinId = null;
     let editingPinType = null;
 
-    // Initialize Cesium Viewer with your Ion access token
-    Cesium.Ion.defaultAccessToken = 'YOUR_CESeyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI1ODgwZDk4YS1kNmM2LTQyMmUtYmU4MS00OWUyOTgxYjg3MWMiLCJpZCI6Mjk0MzMxLCJpYXQiOjE3NDQ3MjY5MDN9.GiksKrwslZbSBi62HqVdBBrPQKvSQwF5TT5KmmUPMRQIUM_ACCESS_TOKEN';
+    // Initialize Cesium Viewer with infoBox disabled so we can use our custom popup
+    Cesium.Ion.defaultAccessToken = 'YOUR_CEeyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI1ODgwZDk4YS1kNmM2LTQyMmUtYmU4MS00OWUyOTgxYjg3MWMiLCJpZCI6Mjk0MzMxLCJpYXQiOjE3NDQ3MjY5MDN9.GiksKrwslZbSBi62HqVdBBrPQKvSQwF5TT5KmmUPMRQSIUM_ACCESS_TOKEN';
     const bingAerialProvider = new Cesium.IonImageryProvider({ assetId: 2 });
     const ellipsoidTerrain = new Cesium.EllipsoidTerrainProvider();
     const viewer = new Cesium.Viewer('cesiumContainer', {
@@ -358,53 +381,40 @@
       terrainProvider: ellipsoidTerrain,
       baseLayerPicker: false,
       animation: false,
-      timeline: false
+      timeline: false,
+      infoBox: false  // disable the default info box
     });
     viewer.camera.flyTo({
       destination: Cesium.Cartesian3.fromDegrees(-95, 40, 2500000)
     });
 
-    // Inject custom CSS into the default InfoBox's iframe using a periodic check.
-    const injectionInterval = setInterval(function() {
-      if (viewer.infoBox && viewer.infoBox.frame && viewer.infoBox.frame.contentDocument) {
-        const doc = viewer.infoBox.frame.contentDocument;
-        if (doc.head && !doc.getElementById("customInfoBoxStyle")) {
-          const styleEl = doc.createElement("style");
-          styleEl.id = "customInfoBoxStyle";
-          styleEl.innerHTML = `
-            body { background-color: #111 !important; color: #00ffff !important; font-family: 'Orbitron', sans-serif; }
-            .cesium-infoBox { border: 2px solid #00ffff !important; border-radius: 10px !important; padding: 10px !important; box-shadow: 0 0 10px #00ffff !important; }
-          `;
-          doc.head.appendChild(styleEl);
-          clearInterval(injectionInterval);
-        }
+    // Custom Popup functions
+    function showCustomPopup(screenPosition, content) {
+      const popup = document.getElementById("customPopup");
+      popup.innerHTML = content;
+      // Position the popup near the click position (adjust offset as needed)
+      popup.style.left = (screenPosition.x + 10) + "px";
+      popup.style.top = (screenPosition.y + 10) + "px";
+      popup.style.display = "block";
+    }
+    function hideCustomPopup() {
+      document.getElementById("customPopup").style.display = "none";
+    }
+
+    // Show custom popup when an entity is clicked
+    const clickHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+    clickHandler.setInputAction((movement) => {
+      const pickedObject = viewer.scene.pick(movement.position);
+      if (Cesium.defined(pickedObject) && Cesium.defined(pickedObject.id)) {
+        // Use the entity's description (custom HTML) as popup content.
+        const content = pickedObject.id.description || "<div>No content</div>";
+        showCustomPopup(movement.position, content);
+      } else {
+        hideCustomPopup();
       }
-    }, 500);
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-    // Initialize Bootstrap modal
-    const pinModalEl = document.getElementById("pinModal");
-    const modal = new bootstrap.Modal(pinModalEl);
-
-    // Double-click event on Cesium: get lat/lon and open modal
-    const doubleClickHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-    doubleClickHandler.setInputAction((movement) => {
-      const pickedPosition = viewer.camera.pickEllipsoid(movement.position);
-      if (Cesium.defined(pickedPosition)) {
-        const cartographic = Cesium.Cartographic.fromCartesian(pickedPosition);
-        const lon = Cesium.Math.toDegrees(cartographic.longitude);
-        const lat = Cesium.Math.toDegrees(cartographic.latitude);
-        // Populate modal fields for each form type
-        ["Simple", "Det", "Shop"].forEach(type => {
-          document.getElementById(`modalLat${type}`).value = lat.toFixed(5);
-          document.getElementById(`modalLng${type}`).value = lon.toFixed(5);
-        });
-        editingPinId = null;
-        editingPinType = null;
-        modal.show();
-      }
-    }, Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
-
-    // Offcanvas form event for adding a new simple pin (if used)
+    // Offcanvas form event for adding a new simple pin
     document.getElementById("pinForm").addEventListener("submit", async e => {
       e.preventDefault();
       const lat = parseFloat(document.getElementById("latitude").value);
@@ -414,7 +424,7 @@
       await saveEventPin(lat, lon, "Pin", description, "", "");
     });
 
-    // Check authentication
+    // Firebase Authentication check
     onAuthStateChanged(auth, user => {
       if (!user) {
         window.location.href = "user/userlogin.html";
@@ -450,7 +460,7 @@
       return `<iframe class="pin-iframe" src="${link}" allowfullscreen></iframe>`;
     }
 
-    // Add pin as a Cesium entity with a popup description containing interactive buttons
+    // Add pin as a Cesium entity with a custom HTML description for our popup
     function addPinCesium(lat, lon, pinData, userId, pinId, pinType) {
       let content = `<div class="pin-popup-content">
         <strong>Title:</strong> ${pinData.title || "Untitled"}<br>
@@ -481,7 +491,7 @@
         position: Cesium.Cartesian3.fromDegrees(lon, lat),
         billboard: {
           image: 'https://cdn-icons-png.flaticon.com/512/1673/1673221.png',
-          scale: 0.075,  // Reduced pin size (75% smaller than 0.3)
+          scale: 0.075,  // Reduced pin size
           verticalOrigin: Cesium.VerticalOrigin.BOTTOM
         },
         label: {
@@ -517,7 +527,6 @@
         }
       });
     }
-
     function loadUserPinTypes(userId, userData) {
       ["eventPins", "moodPins", "shopPins"].forEach(pinType => {
         const group = userData[pinType];
@@ -531,7 +540,7 @@
       });
     }
 
-    // Global functions for interactive actions – these are attached to window so they can be called inline
+    // Global functions for interactive actions – accessible from popup buttons
     window.likePin = async function(userId, pinType, pinId) {
       const pinRef = ref(db, `pins/${userId}/${pinType}/${pinId}`);
       const snapshot = await get(pinRef);
@@ -541,7 +550,6 @@
         await update(pinRef, { likes: currentLikes + 1 });
       }
     };
-
     window.dislikePin = async function(userId, pinType, pinId) {
       const pinRef = ref(db, `pins/${userId}/${pinType}/${pinId}`);
       const snapshot = await get(pinRef);
@@ -551,7 +559,6 @@
         await update(pinRef, { dislikes: currentDislikes + 1 });
       }
     };
-
     window.deletePin = async function(userId, pinType, pinId) {
       if (userId === currentUser.uid && confirm("Are you sure you want to delete this pin?")) {
         const pinRef = ref(db, `pins/${userId}/${pinType}/${pinId}`);
@@ -559,7 +566,6 @@
         loadPinsFromFirebase();
       }
     };
-
     window.editPin = async function(userId, pinType, pinId) {
       const pinRef = ref(db, `pins/${userId}/${pinType}/${pinId}`);
       const snapshot = await get(pinRef);
@@ -597,7 +603,6 @@
       }
       modal.show();
     };
-
     async function updatePin(pinType, pinId, updatedData) {
       const pinRef = ref(db, `pins/${currentUser.uid}/${pinType}/${pinId}`);
       return update(pinRef, updatedData);
@@ -614,14 +619,12 @@
         }
       }).open();
     }
-
     document.getElementById("uploadEventBtn").addEventListener("click", () => {
       openCloudinary(url => {
         eventImageUrl = url;
         alert("Event image uploaded");
       });
     });
-
     document.getElementById("uploadShopBtn").addEventListener("click", () => {
       openCloudinary(url => {
         shopImageUrl = url;
@@ -643,12 +646,11 @@
       document.getElementById("shopModalForm").classList.remove("d-none");
     };
     document.getElementById("backFromSimpleModal").onclick =
-    document.getElementById("backFromDetailedModal").onclick =
-    document.getElementById("backFromShopModal").onclick = () => {
-      hideForms();
-      document.getElementById("modalChoice").classList.remove("d-none");
-    };
-
+      document.getElementById("backFromDetailedModal").onclick =
+      document.getElementById("backFromShopModal").onclick = () => {
+        hideForms();
+        document.getElementById("modalChoice").classList.remove("d-none");
+      };
     function hideForms() {
       ["modalChoice", "simpleModalForm", "detailedModalForm", "shopModalForm"]
         .forEach(id => document.getElementById(id).classList.add("d-none"));
@@ -678,7 +680,6 @@
       editingPinType = null;
       modal.hide();
     });
-
     document.getElementById("detailedModalForm").addEventListener("submit", async e => {
       e.preventDefault();
       const lat = parseFloat(document.getElementById("modalLatDet").value);
@@ -700,7 +701,6 @@
       editingPinType = null;
       modal.hide();
     });
-
     document.getElementById("shopModalForm").addEventListener("submit", async e => {
       e.preventDefault();
       const lat = parseFloat(document.getElementById("modalLatShop").value);
@@ -741,7 +741,6 @@
         timestamp: Date.now()
       });
     }
-
     function saveMoodPin(lat, lng, title, desc, songLink = "") {
       const refPath = ref(db, `pins/${currentUser.uid}/moodPins`);
       return set(push(refPath), {
@@ -754,7 +753,6 @@
         timestamp: Date.now()
       });
     }
-
     function saveShopPin(lat, lng, title, desc, imageUrl = "", quantity, link) {
       const refPath = ref(db, `pins/${currentUser.uid}/shopPins`);
       return set(push(refPath), {
@@ -772,6 +770,7 @@
   </script>
 </body>
 </html>
+
 
 
 
