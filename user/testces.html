@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Cesium: Opaque Globe & Custom Popup</title>
+  <title>Cesium: Interactive Map with Custom Popup & Editable Pins</title>
   <!-- Cesium CSS -->
   <link rel="stylesheet" href="https://cesium.com/downloads/cesiumjs/releases/1.100/Build/Cesium/Widgets/widgets.css" />
   <!-- Bootstrap CSS -->
@@ -10,34 +10,18 @@
   <!-- Tron-like font from Google Fonts -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap">
   <style>
-    /* Force an opaque black background for the entire page */
+    /* Ensure the whole document and Cesium container are opaque and black */
     html, body {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
-      background-color: #000; /* Opaque black */
+      background-color: #000;
       font-family: 'Orbitron', sans-serif;
       color: #00ffff;
       overflow: hidden;
     }
-
-    /* Ensures Cesium container is also opaque black */
-    #cesiumContainer {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 1;
-      background-color: #000 !important; 
-    }
-    /* Sometimes the Cesium canvas can pick up transparency from CSS. Force it to be fully opaque. */
-    #cesiumContainer canvas {
-      opacity: 1 !important;
-    }
-
-    /* Optional background video. If it's truly behind the globe, it shouldn't override the globe. */
+    /* Background Video */
     #bgvideo {
       position: fixed;
       top: 0;
@@ -48,7 +32,20 @@
       object-fit: cover;
       opacity: 1;
     }
-
+    /* Cesium Container – force an opaque background */
+    #cesiumContainer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      background-color: #000 !important;
+    }
+    /* Ensure the Cesium canvas remains opaque */
+    #cesiumContainer canvas {
+      opacity: 1 !important;
+    }
     /* Offcanvas Toggle (Hamburger) */
     #offcanvasToggle {
       position: fixed;
@@ -84,7 +81,6 @@
       border-radius: 2px;
       box-shadow: 0 0 5px #00ffff;
     }
-
     /* Tron-inspired Offcanvas Sidebar */
     .offcanvas {
       background-color: rgba(0, 0, 0, 0.95);
@@ -99,10 +95,12 @@
       color: #00ffff;
       border-bottom: 1px solid rgba(0, 255, 255, 0.2);
     }
+    .offcanvas .nav-link.active {
+      background-color: rgba(0, 31, 63, 0.5);
+    }
     .offcanvas .nav-link:hover {
       background-color: rgba(0, 31, 63, 0.5);
     }
-
     /* Tron-style gradient forms and pin popups */
     .blue-gradient-form {
       background: rgba(0, 31, 63, 0.85);
@@ -121,8 +119,7 @@
       border-radius: 10px;
       max-width: 300px;
     }
-
-    /* Custom Popup (for entity click) */
+    /* Custom Popup (for our entity click) – fully controlled via CSS */
     #customPopup {
       position: absolute;
       background-color: #111;
@@ -131,11 +128,11 @@
       border-radius: 10px;
       padding: 10px;
       box-shadow: 0 0 10px #00ffff;
+      font-family: 'Orbitron', sans-serif;
       z-index: 100;
       display: none;
       max-width: 300px;
     }
-
     /* Button Styles */
     .btn {
       font-family: 'Orbitron', sans-serif;
@@ -202,7 +199,7 @@
   </style>
 </head>
 <body>
-  <!-- Optional Background Video -->
+  <!-- Background Video -->
   <video autoplay muted loop id="bgvideo">
     <source src="stars.mp4" type="video/mp4">
   </video>
@@ -265,7 +262,7 @@
   <!-- Cesium Map Container -->
   <div id="cesiumContainer"></div>
 
-  <!-- Custom Popup (for entity click) -->
+  <!-- Custom Popup Element -->
   <div id="customPopup"></div>
 
   <!-- Main Modal for Pin Creation -->
@@ -363,10 +360,10 @@
       messagingSenderId: "753873898041",
       appId: "1:753873898041:web:bde5e8f86aea63b175dbe8"
     };
+
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const auth = getAuth(app);
-
     let currentUser = null;
     let eventImageUrl = "";
     let shopImageUrl = "";
@@ -375,7 +372,7 @@
     let editingPinId = null;
     let editingPinType = null;
 
-    // Initialize Cesium Viewer with infoBox disabled so we can use our own popup
+    // Initialize Cesium Viewer with infoBox disabled so we can use our custom popup
     Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI1ODgwZDk4YS1kNmM2LTQyMmUtYmU4MS00OWUyOTgxYjg3MWMiLCJpZCI6Mjk0MzMxLCJpYXQiOjE3NDQ3MjY5MDN9.GiksKrwslZbSBi62HqVdBBrPQKvSQwF5TT5KmmUPMRQ';
     const bingAerialProvider = new Cesium.IonImageryProvider({ assetId: 2 });
     const ellipsoidTerrain = new Cesium.EllipsoidTerrainProvider();
@@ -385,32 +382,17 @@
       baseLayerPicker: false,
       animation: false,
       timeline: false,
-      infoBox: false
+      infoBox: false  // disable the default info box
     });
-
-    // Make sure the globe is visible & not translucent
-    viewer.scene.globe.show = true;                         // ensure globe is visible
-    viewer.scene.globe.translucency.enabled = false;        // disable any "see-through" effect
-    viewer.scene.globe.baseColor = Cesium.Color.DARK_GRAY;  // fallback color if imagery fails
-    viewer.scene.skyAtmosphere.show = true;
-    viewer.scene.backgroundColor = Cesium.Color.BLACK;
-    viewer.scene.globe.enableLighting = false;              // if true, can appear dark on night side
-
-    // Log imagery loading errors to console if Ion is blocked or invalid
-    bingAerialProvider.errorEvent.addEventListener((tileProviderError) => {
-      console.error("Bing Imagery Provider Error: ", tileProviderError);
-      alert("Could not load Bing imagery. Check console logs for details. Possibly your token or network is blocked.");
-    });
-
-    // Camera to initial location
     viewer.camera.flyTo({
       destination: Cesium.Cartesian3.fromDegrees(-95, 40, 2500000)
     });
 
-    // Custom Popup logic
+    // Custom Popup functions
     function showCustomPopup(screenPosition, content) {
       const popup = document.getElementById("customPopup");
       popup.innerHTML = content;
+      // Position the popup near the click position (adjust offset as needed)
       popup.style.left = (screenPosition.x + 10) + "px";
       popup.style.top = (screenPosition.y + 10) + "px";
       popup.style.display = "block";
@@ -419,11 +401,12 @@
       document.getElementById("customPopup").style.display = "none";
     }
 
-    // Left-click to show custom popup
+    // Show custom popup when an entity is clicked
     const clickHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
     clickHandler.setInputAction((movement) => {
       const pickedObject = viewer.scene.pick(movement.position);
       if (Cesium.defined(pickedObject) && Cesium.defined(pickedObject.id)) {
+        // Use the entity's description (custom HTML) as popup content.
         const content = pickedObject.id.description || "<div>No content</div>";
         showCustomPopup(movement.position, content);
       } else {
@@ -431,16 +414,17 @@
       }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-    // Basic offcanvas form event
+    // Offcanvas form event for adding a new simple pin
     document.getElementById("pinForm").addEventListener("submit", async e => {
       e.preventDefault();
       const lat = parseFloat(document.getElementById("latitude").value);
       const lon = parseFloat(document.getElementById("longitude").value);
       const description = document.getElementById("description").value;
+      // Save as a basic event pin
       await saveEventPin(lat, lon, "Pin", description, "", "");
     });
 
-    // Auth check
+    // Firebase Authentication check
     onAuthStateChanged(auth, user => {
       if (!user) {
         window.location.href = "user/userlogin.html";
@@ -450,7 +434,7 @@
       loadPinsFromFirebase();
     });
 
-    // Helper to embed Spotify/Youtube/MP4/MP3 links
+    // Generate embeddable content for song/video links
     function generateEmbedContent(link) {
       if (!link) return "";
       if (link.includes("open.spotify.com/track/")) {
@@ -476,13 +460,11 @@
       return `<iframe class="pin-iframe" src="${link}" allowfullscreen></iframe>`;
     }
 
-    // Create Cesium entity with custom HTML description
+    // Add pin as a Cesium entity with a custom HTML description for our popup
     function addPinCesium(lat, lon, pinData, userId, pinId, pinType) {
-      let content = `
-        <div class="pin-popup-content">
-          <strong>Title:</strong> ${pinData.title || "Untitled"}<br>
-          <strong>Description:</strong> ${pinData.description || ""}
-      `;
+      let content = `<div class="pin-popup-content">
+        <strong>Title:</strong> ${pinData.title || "Untitled"}<br>
+        <strong>Description:</strong> ${pinData.description || ""}`;
       if (pinData.songLink) {
         content += "<br>" + generateEmbedContent(pinData.songLink);
       }
@@ -490,28 +472,26 @@
         content += `<br><img class="pin-image" src="${pinData.imageUrl}" alt="Pin Image">`;
       }
       content += `
-          <br>
-          <button class="btn btn-outline-light btn-sm" onclick="likePin('${userId}','${pinType}','${pinId}')">
-            Like (${pinData.likes || 0})
-          </button>
-          <button class="btn btn-outline-light btn-sm" onclick="dislikePin('${userId}','${pinType}','${pinId}')">
-            Dislike (${pinData.dislikes || 0})
-          </button>
-      `;
+        <br>
+        <button class="btn btn-outline-light btn-sm" onclick="likePin('${userId}','${pinType}','${pinId}')">
+          Like (${pinData.likes || 0})
+        </button>
+        <button class="btn btn-outline-light btn-sm" onclick="dislikePin('${userId}','${pinType}','${pinId}')">
+          Dislike (${pinData.dislikes || 0})
+        </button>`;
       if (userId === currentUser.uid) {
         content += `
-            <br>
-            <button class="btn btn-warning btn-sm mt-2" onclick="editPin('${userId}','${pinType}','${pinId}')">Edit</button>
-            <button class="btn btn-danger btn-sm mt-2" onclick="deletePin('${userId}','${pinType}','${pinId}')">Delete</button>
+          <br>
+          <button class="btn btn-warning btn-sm mt-2" onclick="editPin('${userId}','${pinType}','${pinId}')">Edit</button>
+          <button class="btn btn-danger btn-sm mt-2" onclick="deletePin('${userId}','${pinType}','${pinId}')">Delete</button>
         `;
       }
       content += `</div>`;
-
       const entity = viewer.entities.add({
         position: Cesium.Cartesian3.fromDegrees(lon, lat),
         billboard: {
           image: 'https://cdn-icons-png.flaticon.com/512/1673/1673221.png',
-          scale: 0.075,  // smaller pin size
+          scale: 0.075,  // Reduced pin size
           verticalOrigin: Cesium.VerticalOrigin.BOTTOM
         },
         label: {
@@ -528,7 +508,7 @@
       return entity;
     }
 
-    // Load pins from Firebase
+    // Load pins from Firebase and add them to Cesium
     function loadPinsFromFirebase() {
       markersList.forEach(entity => viewer.entities.remove(entity));
       markersList = [];
@@ -560,7 +540,7 @@
       });
     }
 
-    // Global functions for interactive actions (like, dislike, edit, delete)
+    // Global functions for interactive actions – accessible from popup buttons
     window.likePin = async function(userId, pinType, pinId) {
       const pinRef = ref(db, `pins/${userId}/${pinType}/${pinId}`);
       const snapshot = await get(pinRef);
@@ -593,7 +573,6 @@
       const pinData = snapshot.val();
       editingPinId = pinId;
       editingPinType = pinType;
-
       if (pinType === "eventPins") {
         document.getElementById("modalTitleSimple").value = pinData.title || "";
         document.getElementById("modalDescSimple").value = pinData.description || "";
@@ -622,18 +601,14 @@
         hideForms();
         document.getElementById("shopModalForm").classList.remove("d-none");
       }
-      const pinModalEl = document.getElementById("pinModal");
-      const modal = new bootstrap.Modal(pinModalEl);
       modal.show();
     };
-
-    // Update existing pin
     async function updatePin(pinType, pinId, updatedData) {
       const pinRef = ref(db, `pins/${currentUser.uid}/${pinType}/${pinId}`);
       return update(pinRef, updatedData);
     }
 
-    // Cloudinary uploading
+    // Cloudinary upload handler (requires Cloudinary’s widget to be available)
     function openCloudinary(callback) {
       cloudinary.createUploadWidget({
         cloudName: "djhoct1eh",
@@ -657,7 +632,7 @@
       });
     });
 
-    // Modal form navigation
+    // Modal navigation
     document.getElementById("modalBtnSimple").onclick = () => {
       hideForms();
       document.getElementById("simpleModalForm").classList.remove("d-none");
@@ -671,12 +646,11 @@
       document.getElementById("shopModalForm").classList.remove("d-none");
     };
     document.getElementById("backFromSimpleModal").onclick =
-    document.getElementById("backFromDetailedModal").onclick =
-    document.getElementById("backFromShopModal").onclick = () => {
-      hideForms();
-      document.getElementById("modalChoice").classList.remove("d-none");
-    };
-
+      document.getElementById("backFromDetailedModal").onclick =
+      document.getElementById("backFromShopModal").onclick = () => {
+        hideForms();
+        document.getElementById("modalChoice").classList.remove("d-none");
+      };
     function hideForms() {
       ["modalChoice", "simpleModalForm", "detailedModalForm", "shopModalForm"]
         .forEach(id => document.getElementById(id).classList.add("d-none"));
@@ -704,7 +678,7 @@
       eventImageUrl = "";
       editingPinId = null;
       editingPinType = null;
-      document.getElementById("pinModal").querySelector(".btn-close").click();
+      modal.hide();
     });
     document.getElementById("detailedModalForm").addEventListener("submit", async e => {
       e.preventDefault();
@@ -725,7 +699,7 @@
       }
       editingPinId = null;
       editingPinType = null;
-      document.getElementById("pinModal").querySelector(".btn-close").click();
+      modal.hide();
     });
     document.getElementById("shopModalForm").addEventListener("submit", async e => {
       e.preventDefault();
@@ -750,11 +724,11 @@
       shopImageUrl = "";
       editingPinId = null;
       editingPinType = null;
-      document.getElementById("pinModal").querySelector(".btn-close").click();
+      modal.hide();
     });
 
-    // Save new pins
-    function saveEventPin(lat, lon, title, desc, imageUrl = "", songLink = "") {
+    // Functions to save new pins to Firebase
+    function saveEventPin(lat, lng, title, desc, imageUrl = "", songLink = "") {
       const refPath = ref(db, `pins/${currentUser.uid}/eventPins`);
       return set(push(refPath), {
         title,
@@ -763,11 +737,11 @@
         songLink,
         likes: 0,
         dislikes: 0,
-        geolocation: { lat, lng: lon },
+        geolocation: { lat, lng },
         timestamp: Date.now()
       });
     }
-    function saveMoodPin(lat, lon, title, desc, songLink = "") {
+    function saveMoodPin(lat, lng, title, desc, songLink = "") {
       const refPath = ref(db, `pins/${currentUser.uid}/moodPins`);
       return set(push(refPath), {
         title,
@@ -775,11 +749,11 @@
         songLink,
         likes: 0,
         dislikes: 0,
-        geolocation: { lat, lng: lon },
+        geolocation: { lat, lng },
         timestamp: Date.now()
       });
     }
-    function saveShopPin(lat, lon, title, desc, imageUrl = "", quantity, link) {
+    function saveShopPin(lat, lng, title, desc, imageUrl = "", quantity, link) {
       const refPath = ref(db, `pins/${currentUser.uid}/shopPins`);
       return set(push(refPath), {
         title,
@@ -789,14 +763,13 @@
         link,
         likes: 0,
         dislikes: 0,
-        geolocation: { lat, lng: lon },
+        geolocation: { lat, lng },
         timestamp: Date.now()
       });
     }
   </script>
 </body>
 </html>
-
 
 
 
