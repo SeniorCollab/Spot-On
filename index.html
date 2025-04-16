@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <!-- Viewport Meta Tag for Mobile -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Interactive Map with Editable Pins</title>
   <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -15,7 +17,6 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      /* No background color so video remains visible */
       font-family: 'Orbitron', sans-serif;
       color: #00ffff;  /* neon cyan as base text color */
     }
@@ -28,7 +29,7 @@
       min-height: 100%;
       z-index: -2;
       object-fit: cover;
-      opacity: 1;  /* video fully visible */
+      opacity: 1;
     }
     /* Globe Container (WebGL Earth) */
     #earth_div {
@@ -39,7 +40,7 @@
       height: 100%;
       z-index: 0;
     }
-    /* Custom Hamburger Button styling (consistent with first code) */
+    /* Custom Hamburger Button styling */
     .hamburger-btn {
       background: none;
       border: none;
@@ -115,6 +116,39 @@
       border: 2px solid #00ffff;
       box-shadow: 0 0 5px #00ffff;
     }
+    /* Mobile-Specific Styles */
+    @media (max-width: 768px) {
+      /* Adjust offcanvas to drop down with Tron glitch effect */
+      .offcanvas {
+        top: 0;
+        right: 0;
+        left: 0;
+        bottom: auto;
+        border-left: none;
+        border-top: 2px solid #00ffff;
+        animation: glitchDrop 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+      }
+      /* Define the "glitchDrop" keyframes */
+      @keyframes glitchDrop {
+        0% {
+          transform: translateY(-100%);
+          opacity: 0;
+        }
+        50% {
+          transform: translateY(10px);
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+      /* Optionally adjust the hamburger button size on mobile */
+      .hamburger-btn {
+        top: 10px;
+        right: 10px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -139,7 +173,6 @@
   <div class="offcanvas offcanvas-end" id="offcanvasNavbar" tabindex="-1" aria-labelledby="offcanvasNavbarLabel">
     <div class="offcanvas-header">
       <h5 class="offcanvas-title" id="offcanvasNavbarLabel">Spot On</h5>
-      <!-- Using default Bootstrap close button -->
       <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body">
@@ -161,7 +194,9 @@
   <!-- WebGL Earth + Bootstrap JS -->
   <script src="https://www.webglearth.com/v2/api.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-
+  <!-- Hammer.js for touch gestures (CDN) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+  
   <!-- Firebase SDK & Pin Loader -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
@@ -182,6 +217,7 @@
 
     // Create the globe
     const earth = new WE.map('earth_div');
+    // Set a base zoom level; mobile adjustments will be handled later.
     earth.setView([0, 0], 2);
     WE.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors',
@@ -194,12 +230,10 @@
     */
     function generateEmbedContent(link) {
       if (!link) return "";
-      // Spotify track
       if (link.includes("open.spotify.com/track/")) {
         const embedUrl = link.replace("open.spotify.com/track/", "open.spotify.com/embed/track/");
         return `<iframe class="pin-iframe" src="${embedUrl}" allow="encrypted-media" allowfullscreen></iframe>`;
       }
-      // YouTube link
       if (link.includes("youtube.com/watch?v=") || link.includes("youtu.be/")) {
         let videoId = "";
         if (link.includes("watch?v=")) {
@@ -211,15 +245,12 @@
         const embedUrl = `https://www.youtube.com/embed/${videoId}`;
         return `<iframe class="pin-iframe" src="${embedUrl}" allowfullscreen></iframe>`;
       }
-      // MP4
       if (link.endsWith(".mp4")) {
         return `<video class="pin-video" src="${link}" controls></video>`;
       }
-      // MP3
       if (link.endsWith(".mp3")) {
         return `<audio class="pin-audio" src="${link}" controls></audio>`;
       }
-      // Fallback
       return `<iframe class="pin-iframe" src="${link}" allowfullscreen></iframe>`;
     }
     
@@ -232,16 +263,13 @@
     */
     function addPin(lat, lng, pinData) {
       const marker = WE.marker([lat, lng]).addTo(earth);
-
       let content = `
         <strong>${pinData.title || "Untitled"}</strong><br>
         ${pinData.description || ""}
       `;
-      // Embedded media (if provided)
       if (pinData.songLink) {
         content += `<br>${generateEmbedContent(pinData.songLink)}`;
       }
-      // Show image if provided
       if (pinData.imageUrl) {
         content += `
           <br>
@@ -250,11 +278,9 @@
                style="max-width:100%; border-radius:4px; margin-top:0.5rem;">
         `;
       }
-      // Read-only display for likes/dislikes
       const likeCount = pinData.likes || 0;
       const dislikeCount = pinData.dislikes || 0;
       content += `<br><small>Likes: ${likeCount} | Dislikes: ${dislikeCount}</small>`;
-
       marker.bindPopup(content);
     }
     
@@ -264,7 +290,6 @@
       onValue(pinsRef, snapshot => {
         const allUserPins = snapshot.val();
         if (!allUserPins) return;
-        // Each user object has eventPins, moodPins, shopPins
         Object.values(allUserPins).forEach(userPins => {
           ["eventPins", "moodPins", "shopPins"].forEach(pinType => {
             const pinGroup = userPins[pinType];
@@ -279,8 +304,58 @@
         });
       });
     }
-    
     loadPinsFromFirebase();
+
+    // -------------------------------
+    // Mobile-Specific Touch Gestures
+    // -------------------------------
+    if (window.innerWidth <= 768) {
+      // Initialize Hammer.js on the globe container
+      const earthDiv = document.getElementById('earth_div');
+      const hammer = new Hammer.Manager(earthDiv);
+      
+      // Add pinch, pan and doubletap recognizers
+      const pinch = new Hammer.Pinch();
+      const pan = new Hammer.Pan({ threshold: 10 });
+      const doubleTap = new Hammer.Tap({ event: 'doubletap', taps: 2 });
+      hammer.add([pinch, pan, doubleTap]);
+      
+      let currentZoom = 2;
+      const minZoom = 2;
+      const maxZoom = 5;
+      
+      // Handle pinch gesture for zooming
+      hammer.on('pinch', function(ev) {
+        // Calculate a new zoom level based on the pinch scale
+        let newZoom = currentZoom * ev.scale;
+        newZoom = Math.max(minZoom, Math.min(maxZoom, newZoom));
+        earth.setZoom(newZoom);
+      });
+
+      // When the pinch ends, update currentZoom for the next interaction
+      hammer.on('pinchend', function(ev) {
+        currentZoom = earth.getZoom();
+      });
+
+      // Handle pan gesture to move the globe
+      hammer.on('pan', function(ev) {
+        // Retrieve current center and apply offset from pan gesture.
+        // (This is a simple example—tweak sensitivity if needed.)
+        const center = earth.getCenter();
+        const latOffset = ev.deltaY * -0.01;
+        const lngOffset = ev.deltaX * 0.01;
+        earth.setView([center[0] + latOffset, center[1] + lngOffset], earth.getZoom());
+      });
+
+      // Handle double-tap gesture to zoom in a fixed increment
+      hammer.on('doubletap', function(ev) {
+        let newZoom = earth.getZoom() + 0.5;
+        newZoom = Math.min(newZoom, maxZoom);
+        earth.setZoom(newZoom);
+        currentZoom = newZoom;
+      });
+    }
   </script>
 </body>
 </html>
+
