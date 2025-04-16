@@ -385,9 +385,9 @@
     // Create the globe
     const earth = new WE.map("earth_div");
     earth.setView([0, 0], 2);
-    WE.tileLayer("https://stamen-tiles.a.ssl.fastly.net/terrain/{z}/{x}/{y}.png", {
-        attribution: "Map tiles by Stamen Design, CC BY 3.0 — Map data © OpenStreetMap contributors",
-        subdomains: "abcd"
+    WE.tileLayer("https://tiles.wmflabs.org/hillshading/{z}/{x}/{y}.png", {
+        attribution: "Hillshading © Wikimedia",
+        subdomains: "abc"
     }).addTo(earth);
       
       
