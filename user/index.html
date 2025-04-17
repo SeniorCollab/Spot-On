@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <!-- Viewport Meta Tag for Mobile -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Interactive Map with Editable Pins</title>
   <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -190,6 +192,39 @@
       border: 2px solid #00ffff;
       box-shadow: 0 0 5px #00ffff;
     }
+    /* Mobile-Specific CSS Enhancements */
+    @media (max-width: 768px) {
+      /* Offcanvas sidebar drops down with Tron glitch animation */
+      .offcanvas {
+        top: 0;
+        right: 0;
+        left: 0;
+        bottom: auto;
+        border-left: none;
+        border-top: 2px solid #00ffff;
+        animation: glitchDrop 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+      }
+      /* Tron glitch effect keyframes */
+      @keyframes glitchDrop {
+        0% {
+          transform: translateY(-100%);
+          opacity: 0;
+        }
+        50% {
+          transform: translateY(10px);
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+      /* Adjust hamburger button size on mobile */
+      .hamburger-btn {
+        top: 10px;
+        right: 10px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -341,8 +376,10 @@
   <!-- WebGL Earth & Bootstrap JS -->
   <script src="https://www.webglearth.com/v2/api.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Include Hammer.js for mobile touch gestures -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
 
-  <!-- Firebase v10+ -->
+  <!-- Firebase v10+ and App Logic -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getDatabase, ref, push, set, onValue, get, update, remove } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
@@ -390,7 +427,7 @@
       subdomains: "abc"
     }).addTo(earth);
 
-    // Double-click detection
+    // Double-click detection for opening the pin modal
     let lastClickTime = 0;
     const clickThreshold = 350; // ms
 
@@ -442,6 +479,7 @@
        Load existing pins from Firebase
     ------------------------------------------------------------------ */
     function loadPinsFromFirebase() {
+      // Remove existing markers
       markersList.forEach(m => m.removeFrom(earth));
       markersList = [];
 
@@ -518,19 +556,16 @@
     function addPin(lat, lng, pinData, userId, pinId, pinType) {
       const marker = WE.marker([lat, lng]).addTo(earth);
       let content = `<div class="pin-popup-content">`;
-
       content += `
         <strong>Title:</strong> ${pinData.title || "Untitled"}<br>
         <strong>Description:</strong> ${pinData.description || ""}
       `;
-
       if (pinData.songLink) {
         content += "<br>" + generateEmbedContent(pinData.songLink);
       }
       if (pinData.imageUrl) {
         content += `<br><img class="pin-image" src="${pinData.imageUrl}" alt="Pin Image">`;
       }
-
       const likesCount = pinData.likes || 0;
       const dislikesCount = pinData.dislikes || 0;
       content += `
@@ -541,7 +576,6 @@
                 data-pin-id="${pinId}">
           Like (${likesCount})
         </button>
-
         <button class="dislike-button btn btn-outline-light btn-sm"
                 data-user-id="${userId}"
                 data-pin-type="${pinType}"
@@ -549,7 +583,6 @@
           Dislike (${dislikesCount})
         </button>
       `;
-
       if (userId === currentUser.uid) {
         content += `
           <br>
@@ -567,7 +600,6 @@
           </button>
         `;
       }
-
       content += `</div>`;
       marker.bindPopup(content);
       return marker;
@@ -636,7 +668,6 @@
       const snapshot = await get(pinRef);
       if (!snapshot.exists()) return;
       const pinData = snapshot.val();
-
       editingPinId = pinId;
       editingPinType = pinType;
 
@@ -670,7 +701,6 @@
         hideForms();
         document.getElementById("shopModalForm").classList.remove("d-none");
       }
-
       modal.show();
     }
 
@@ -858,59 +888,50 @@
     }
 
     /* ------------------------------------------------------------------
-       MOBILE-SPECIFIC TOUCH GESTURES: Separate Pinch-to-Zoom from Pan
-       Zoom only occurs if there is essentially no translation.
-       Additionally, if the globe is near the North or South Pole (|lat| ≥ 89°),
-       any pinch that would zoom in is ignored.
+       Mobile Touch Gesture Integration Using Hammer.js
     ------------------------------------------------------------------ */
     if (window.innerWidth <= 768) {
       const earthDiv = document.getElementById('earth_div');
       const hammer = new Hammer.Manager(earthDiv);
-
+      
       // Add pinch and pan recognizers.
       const pinch = new Hammer.Pinch();
       const pan = new Hammer.Pan({ threshold: 10 });
       hammer.add([pinch, pan]);
-
+      
       let currentZoom = 2;
       const minZoom = 2;
-      const dampingFactor = 0.5; // Damping for smoother zoom.
-
-      // Flag to track whether a pan gesture is in progress.
+      const dampingFactor = 0.5;
       let isPanning = false;
-
+      
       hammer.on('panstart', function(ev) {
         isPanning = true;
       });
       hammer.on('panend', function(ev) {
         isPanning = false;
       });
-
-      // Pinch handler: Only update zoom if there's essentially no translation.
+      
       hammer.on('pinch', function(ev) {
         if (isPanning) return;
         if (Math.abs(ev.deltaX) > 15 || Math.abs(ev.deltaY) > 15) return;
         if (ev.scale >= 0.9 && ev.scale <= 1.1) return;
-
-        // Check if near the poles.
-        const center = earth.getCenter(); // [latitude, longitude]
-        if (Math.abs(center[0]) >= 89 && ev.scale > 1) return;
-
+        const center = earth.getCenter();
+        if (Math.abs(center[0]) >= 89) {
+          if (ev.scale > 1) return;
+        }
         let desiredZoom = currentZoom * (1 + (ev.scale - 1) * dampingFactor);
         desiredZoom = Math.max(minZoom, desiredZoom);
         earth.setZoom(desiredZoom);
       });
-
-      // Update currentZoom when the pinch ends.
+      
       hammer.on('pinchend', function(ev) {
         currentZoom = earth.getZoom();
       });
-
-      // Pan handler: Always update the center without affecting zoom.
+      
       hammer.on('pan', function(ev) {
         const center = earth.getCenter();
         const latOffset = ev.deltaY * -0.005;
-        const lngOffset = ev.deltaX * -0.005; // Inverted for natural right-drag.
+        const lngOffset = ev.deltaX * -0.005;
         earth.setView([center[0] + latOffset, center[1] + lngOffset], earth.getZoom());
       });
     }
