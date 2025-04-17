@@ -121,11 +121,18 @@
         height: 40px;
       }
       .hamburger-icon {
-        width: 20px;
-        height: 15px;
+        width: 30px;
+        height: 30px; /* Increased overall height for a more substantial look */
+        flex-direction: column;
+        justify-content: space-between;
       }
       .hamburger-icon span {
-        height: 3px;
+        display: block;
+        height: 8px; /* Increased bar thickness */
+        width: 100%;
+        background-color: #00ffff;
+        border-radius: 2px;
+        box-shadow: 0 0 5px #00ffff;
       }
       .container {
         padding-top: 60px;
