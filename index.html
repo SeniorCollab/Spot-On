@@ -321,7 +321,7 @@
 
     // -------------------------------
     // Mobile-Specific Touch Gestures (Separate Pinch-to-Zoom from Pan)
-    // Zoom only occurs if there is essentially no translation along x or y.
+    // Zoom only occurs if there is essentially no translation.
     // -------------------------------
     if (window.innerWidth <= 768) {
       const earthDiv = document.getElementById('earth_div');
@@ -335,12 +335,25 @@
       let currentZoom = 2;
       const minZoom = 2;
       const dampingFactor = 0.5; // Damping for smoother zoom.
+
+      // Flag to track whether a pan gesture is in progress.
+      let isPanning = false;
       
-      // Pinch handler: Only trigger zoom if no translation is detected.
-      // Here we require both deltaX and deltaY to be virtually zero.
+      // Listen for panstart and panend events to update the flag.
+      hammer.on('panstart', function(ev) {
+        isPanning = true;
+      });
+      
+      hammer.on('panend', function(ev) {
+        isPanning = false;
+      });
+      
+      // Pinch handler: only update zoom if no panning is occurring.
       hammer.on('pinch', function(ev) {
+        if (isPanning) return; // Ignore pinch events if panning.
+        // Check for any significant translation; if detected, do not zoom.
         if (Math.abs(ev.deltaX) > 15 || Math.abs(ev.deltaY) > 15) return;
-        // Also check that scale factor is meaningfully different from 1.
+        // Also ignore if the scale factor is nearly neutral.
         if (ev.scale >= 0.9 && ev.scale <= 1.1) return;
         
         let desiredZoom = currentZoom * (1 + (ev.scale - 1) * dampingFactor);
@@ -348,22 +361,23 @@
         earth.setZoom(desiredZoom);
       });
       
-      // When the pinch ends, update the current zoom level.
+      // Update currentZoom when the pinch ends.
       hammer.on('pinchend', function(ev) {
         currentZoom = earth.getZoom();
       });
       
-      // Pan handler: Always update the center without affecting zoom.
+      // Pan handler: always update the center without changing zoom.
       hammer.on('pan', function(ev) {
         const center = earth.getCenter();
         const latOffset = ev.deltaY * -0.005;
-        const lngOffset = ev.deltaX * -0.005; // Inverted so that right-drag rotates right.
+        const lngOffset = ev.deltaX * -0.005; // Inverted for natural right-drag.
         earth.setView([center[0] + latOffset, center[1] + lngOffset], earth.getZoom());
       });
     }
   </script>
 </body>
 </html>
+
 
 
 
