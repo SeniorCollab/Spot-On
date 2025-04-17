@@ -227,9 +227,8 @@
     // Create the globe with WebGL Earth.
     const earth = new WE.map('earth_div');
     earth.setView([0, 0], 2); // Base zoom level on all devices.
-    WE.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
-      subdomains: 'abc'
+    WE.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+      attribution: "Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
     }).addTo(earth);
 
     /*

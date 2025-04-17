@@ -430,7 +430,6 @@
     logoutBtn.addEventListener("click", () => {
       signOut(auth)
         .then(() => {
-          // Signed out successfully
           window.location.href = "../index.html";
         })
         .catch(err => {
@@ -443,13 +442,11 @@
        Load existing pins from Firebase
     ------------------------------------------------------------------ */
     function loadPinsFromFirebase() {
-      // Remove existing markers
       markersList.forEach(m => m.removeFrom(earth));
       markersList = [];
 
       const path = showOnlyMyPins ? `pins/${currentUser.uid}` : "pins";
       onValue(ref(db, path), snapshot => {
-        // Clear out old markers again on each update
         markersList.forEach(m => m.removeFrom(earth));
         markersList = [];
 
@@ -457,10 +454,8 @@
         if (!data) return;
 
         if (showOnlyMyPins) {
-          // data = { eventPins: {...}, moodPins: {...}, shopPins: {...} }
           loadUserPinTypes(currentUser.uid, data);
         } else {
-          // data = { userId1: {...}, userId2: {...}, ... }
           Object.entries(data).forEach(([userId, userData]) => {
             loadUserPinTypes(userId, userData);
           });
@@ -472,8 +467,6 @@
       ["eventPins", "moodPins", "shopPins"].forEach(pinType => {
         const group = userData[pinType];
         if (!group) return;
-
-        // For each pin
         Object.entries(group).forEach(([pinId, pin]) => {
           if (pin.geolocation) {
             const marker = addPin(
@@ -495,12 +488,10 @@
     ------------------------------------------------------------------ */
     function generateEmbedContent(link) {
       if (!link) return "";
-      // Spotify
       if (link.includes("open.spotify.com/track/")) {
         const embedUrl = link.replace("open.spotify.com/track/", "open.spotify.com/embed/track/");
         return `<iframe class="pin-iframe" src="${embedUrl}" allow="encrypted-media" allowfullscreen></iframe>`;
       }
-      // YouTube
       if (link.includes("youtube.com/watch?v=") || link.includes("youtu.be/")) {
         let videoId = "";
         if (link.includes("watch?v=")) {
@@ -512,14 +503,12 @@
         const embedUrl = `https://www.youtube.com/embed/${videoId}`;
         return `<iframe class="pin-iframe" src="${embedUrl}" allowfullscreen></iframe>`;
       }
-      // MP4 or MP3
       if (link.endsWith(".mp4")) {
         return `<video class="pin-video" src="${link}" controls></video>`;
       }
       if (link.endsWith(".mp3")) {
         return `<audio class="pin-audio" src="${link}" controls></audio>`;
       }
-      // fallback
       return `<iframe class="pin-iframe" src="${link}" allowfullscreen></iframe>`;
     }
 
@@ -528,26 +517,20 @@
     ------------------------------------------------------------------ */
     function addPin(lat, lng, pinData, userId, pinId, pinType) {
       const marker = WE.marker([lat, lng]).addTo(earth);
-
       let content = `<div class="pin-popup-content">`;
 
-      // Title/description
       content += `
         <strong>Title:</strong> ${pinData.title || "Untitled"}<br>
         <strong>Description:</strong> ${pinData.description || ""}
       `;
 
-      // If there's a link
       if (pinData.songLink) {
         content += "<br>" + generateEmbedContent(pinData.songLink);
       }
-
-      // If there's an image
       if (pinData.imageUrl) {
         content += `<br><img class="pin-image" src="${pinData.imageUrl}" alt="Pin Image">`;
       }
 
-      // Likes / Dislikes (buttons still here for owners)
       const likesCount = pinData.likes || 0;
       const dislikesCount = pinData.dislikes || 0;
       content += `
@@ -567,7 +550,6 @@
         </button>
       `;
 
-      // If current user is the owner => show Edit & Delete
       if (userId === currentUser.uid) {
         content += `
           <br>
@@ -587,7 +569,6 @@
       }
 
       content += `</div>`;
-
       marker.bindPopup(content);
       return marker;
     }
@@ -875,6 +856,65 @@
       ["modalChoice", "simpleModalForm", "detailedModalForm", "shopModalForm"]
         .forEach(id => document.getElementById(id).classList.add("d-none"));
     }
+
+    /* ------------------------------------------------------------------
+       MOBILE-SPECIFIC TOUCH GESTURES: Separate Pinch-to-Zoom from Pan
+       Zoom only occurs if there is essentially no translation.
+       Additionally, if the globe is near the North or South Pole (|lat| ≥ 89°),
+       any pinch that would zoom in is ignored.
+    ------------------------------------------------------------------ */
+    if (window.innerWidth <= 768) {
+      const earthDiv = document.getElementById('earth_div');
+      const hammer = new Hammer.Manager(earthDiv);
+
+      // Add pinch and pan recognizers.
+      const pinch = new Hammer.Pinch();
+      const pan = new Hammer.Pan({ threshold: 10 });
+      hammer.add([pinch, pan]);
+
+      let currentZoom = 2;
+      const minZoom = 2;
+      const dampingFactor = 0.5; // Damping for smoother zoom.
+
+      // Flag to track whether a pan gesture is in progress.
+      let isPanning = false;
+
+      hammer.on('panstart', function(ev) {
+        isPanning = true;
+      });
+      hammer.on('panend', function(ev) {
+        isPanning = false;
+      });
+
+      // Pinch handler: Only update zoom if there's essentially no translation.
+      hammer.on('pinch', function(ev) {
+        if (isPanning) return;
+        if (Math.abs(ev.deltaX) > 15 || Math.abs(ev.deltaY) > 15) return;
+        if (ev.scale >= 0.9 && ev.scale <= 1.1) return;
+
+        // Check if near the poles.
+        const center = earth.getCenter(); // [latitude, longitude]
+        if (Math.abs(center[0]) >= 89 && ev.scale > 1) return;
+
+        let desiredZoom = currentZoom * (1 + (ev.scale - 1) * dampingFactor);
+        desiredZoom = Math.max(minZoom, desiredZoom);
+        earth.setZoom(desiredZoom);
+      });
+
+      // Update currentZoom when the pinch ends.
+      hammer.on('pinchend', function(ev) {
+        currentZoom = earth.getZoom();
+      });
+
+      // Pan handler: Always update the center without affecting zoom.
+      hammer.on('pan', function(ev) {
+        const center = earth.getCenter();
+        const latOffset = ev.deltaY * -0.005;
+        const lngOffset = ev.deltaX * -0.005; // Inverted for natural right-drag.
+        earth.setView([center[0] + latOffset, center[1] + lngOffset], earth.getZoom());
+      });
+    }
   </script>
 </body>
 </html>
+
