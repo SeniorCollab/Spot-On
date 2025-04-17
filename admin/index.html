@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <!-- Viewport Meta Tag for Mobile -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Interactive Map (Admin)</title>
   <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -205,6 +207,39 @@
     .modal-header .btn-close {
       filter: brightness(0) invert(1);
     }
+
+    /* --- Mobile-specific Enhancements --- */
+    @media (max-width: 768px) {
+      /* Offcanvas sidebar drops down with Tron glitch animation */
+      .offcanvas {
+        top: 0;
+        right: 0;
+        left: 0;
+        bottom: auto;
+        border-left: none;
+        border-top: 2px solid #ff3300;
+        animation: glitchDrop 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+      }
+      @keyframes glitchDrop {
+        0% {
+          transform: translateY(-100%);
+          opacity: 0;
+        }
+        50% {
+          transform: translateY(10px);
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+      /* Adjust hamburger button size on mobile */
+      #offcanvasToggle {
+        top: 10px;
+        right: 10px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -284,6 +319,8 @@
   <!-- Libraries -->
   <script src="https://www.webglearth.com/v2/api.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Include Hammer.js for mobile touch gestures -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
 
   <!-- Firebase + Admin Logic (full control) -->
   <script type="module">
@@ -312,9 +349,8 @@
     // WebGL Earth
     const earth = new WE.map("earth_div");
     earth.setView([0, 0], 2);
-    WE.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "© OpenStreetMap contributors",
-      subdomains: "abc"
+    WE.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+      attribution: "Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
     }).addTo(earth);
 
     // Admin Auth Check
@@ -383,11 +419,11 @@
         <strong>Title:</strong> ${pinData.title || "Untitled"}<br>
         <strong>Description:</strong> ${pinData.description || ""}`;
       
-      // if there's a link
+      // If there's a link
       if (pinData.songLink) {
         content += `<br>${generateEmbedContent(pinData.songLink)}`;
       }
-      // if there's an image
+      // If there's an image
       if (pinData.imageUrl) {
         content += `<br><img class="pin-image" src="${pinData.imageUrl}" alt="Pin Image">`;
       }
@@ -439,11 +475,11 @@
       if (link.endsWith(".mp3")) {
         return `<audio class="pin-audio" src="${link}" controls></audio>`;
       }
-      // fallback
+      // Fallback
       return `<iframe class="pin-iframe" src="${link}" allowfullscreen></iframe>`;
     }
 
-    // Listen for clicks on edit / delete
+    // Listen for clicks on edit / delete buttons
     document.addEventListener("click", async (e) => {
       if (e.target.classList.contains("delete-button")) {
         const userId = e.target.dataset.user;
@@ -498,7 +534,7 @@
       loadAllPins();
     });
 
-    // Double-click on globe => add pin
+    // Double-click on globe => fill in pin form fields
     let lastClickTime = 0;
     const clickThreshold = 350;
     earth.on("click", (event) => {
@@ -512,6 +548,54 @@
       lastClickTime = now;
     });
   </script>
+
+  <!-- Mobile Touch Gesture Integration Using Hammer.js -->
+  <script>
+    if (window.innerWidth <= 768) {
+      const earthDiv = document.getElementById('earth_div');
+      const hammer = new Hammer.Manager(earthDiv);
+      
+      // Add pinch and pan recognizers.
+      const pinch = new Hammer.Pinch();
+      const pan = new Hammer.Pan({ threshold: 10 });
+      hammer.add([pinch, pan]);
+      
+      let currentZoom = earth.getZoom();
+      const minZoom = 2;
+      const dampingFactor = 0.5;
+      let isPanning = false;
+      
+      hammer.on('panstart', function(ev) {
+        isPanning = true;
+      });
+      hammer.on('panend', function(ev) {
+        isPanning = false;
+      });
+      
+      hammer.on('pinch', function(ev) {
+        if (isPanning) return;
+        if (Math.abs(ev.deltaX) > 15 || Math.abs(ev.deltaY) > 15) return;
+        if (ev.scale >= 0.9 && ev.scale <= 1.1) return;
+        const center = earth.getCenter();
+        if (Math.abs(center[0]) >= 89 && ev.scale > 1) return;
+        let desiredZoom = currentZoom * (1 + (ev.scale - 1) * dampingFactor);
+        desiredZoom = Math.max(minZoom, desiredZoom);
+        earth.setZoom(desiredZoom);
+      });
+      
+      hammer.on('pinchend', function(ev) {
+        currentZoom = earth.getZoom();
+      });
+      
+      hammer.on('pan', function(ev) {
+        const center = earth.getCenter();
+        const latOffset = ev.deltaY * -0.005;
+        const lngOffset = ev.deltaX * -0.005;
+        earth.setView([center[0] + latOffset, center[1] + lngOffset], earth.getZoom());
+      });
+    }
+  </script>
 </body>
 </html>
+
 
