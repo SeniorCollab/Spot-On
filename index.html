@@ -62,7 +62,7 @@
       display: block;
       height: 4px;
       width: 100%;
-      background-color: #00ffff; /* neon cyan */
+      background-color: #00ffff;
       border-radius: 2px;
       box-shadow: 0 0 5px #00ffff;
     }
@@ -116,7 +116,7 @@
       border: 2px solid #00ffff;
       box-shadow: 0 0 5px #00ffff;
     }
-    /* Tron-styled popup container */
+    /* Tron-styled popup container for forms and marker popups */
     .tron-popup-container {
       background-color: rgba(0, 0, 0, 0.9);
       border: 2px solid #00ffff;
@@ -127,7 +127,7 @@
     }
     /* Mobile-Specific Styles */
     @media (max-width: 768px) {
-      /* Adjust offcanvas to drop down with Tron glitch effect */
+      /* Offcanvas sidebar drops down with Tron glitch animation */
       .offcanvas {
         top: 0;
         right: 0;
@@ -137,7 +137,7 @@
         border-top: 2px solid #00ffff;
         animation: glitchDrop 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);
       }
-      /* Define the "glitchDrop" keyframes */
+      /* Tron glitch effect keyframes */
       @keyframes glitchDrop {
         0% {
           transform: translateY(-100%);
@@ -152,7 +152,7 @@
           opacity: 1;
         }
       }
-      /* Optionally adjust the hamburger button size on mobile */
+      /* Adjust hamburger button size on mobile */
       .hamburger-btn {
         top: 10px;
         right: 10px;
@@ -224,16 +224,17 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // Create the globe
+    // Create the globe with WebGL Earth
     const earth = new WE.map('earth_div');
     earth.setView([0, 0], 2); // Base zoom level on all devices
-    WE.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
-      attribution: "Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
-  }).addTo(earth);
+    WE.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      subdomains: 'abc'
+    }).addTo(earth);
 
     /*
       Utility to embed Spotify/YouTube/MP3/MP4 links.
-      Returns HTML to append in the marker's popup.
+      Returns HTML to be appended in the marker's popup.
     */
     function generateEmbedContent(link) {
       if (!link) return "";
@@ -262,11 +263,11 @@
     }
     
     /*
-      Create a marker on the globe and bind a popup that displays:
+      Create a marker on the globe, and bind a popup that displays:
       - Title
       - Description
       - Embedded media (if any)
-      - Read-only likes/dislikes,
+      - Read-only likes/dislikes
       All wrapped in a Tron-themed container.
     */
     function addPin(lat, lng, pinData) {
@@ -292,6 +293,7 @@
       const dislikeCount = pinData.dislikes || 0;
       content += `<br><small>Likes: ${likeCount} | Dislikes: ${dislikeCount}</small>`;
       content += "</div>";
+      
       marker.bindPopup(content);
     }
     
@@ -318,7 +320,7 @@
     loadPinsFromFirebase();
 
     // -------------------------------
-    // Mobile-Specific Touch Gestures (No double-tap zoom)
+    // Mobile-Specific Touch Gestures (Pinch-to-zoom with damping and decoupled pan)
     // -------------------------------
     if (window.innerWidth <= 768) {
       const earthDiv = document.getElementById('earth_div');
@@ -331,17 +333,27 @@
       
       let currentZoom = 2;
       const minZoom = 2;
-      const maxZoom = 5;
+      // No maximum limit defined (users can zoom indefinitely)
+      const dampingFactor = 0.5; // Damping factor for smoother zooming
       
+      // Handle pinch gesture for zooming
       hammer.on('pinch', function(ev) {
-        let newZoom = currentZoom * ev.scale;
-        newZoom = Math.max(minZoom, Math.min(maxZoom, newZoom));
-        earth.setZoom(newZoom);
+        // Ignore very slight pinch variations to avoid accidental zooming during panning
+        if (Math.abs(ev.scale - 1) < 0.1) return;
+
+        // Calculate the desired zoom with damping applied:
+        let desiredZoom = currentZoom * (1 + (ev.scale - 1) * dampingFactor);
+        // Enforce the minimum zoom level (no max bound)
+        desiredZoom = Math.max(minZoom, desiredZoom);
+        earth.setZoom(desiredZoom);
       });
+      
+      // Update currentZoom when the pinch ends
       hammer.on('pinchend', function(ev) {
         currentZoom = earth.getZoom();
       });
       
+      // Handle pan gesture to reposition the globe without affecting the zoom level
       hammer.on('pan', function(ev) {
         const center = earth.getCenter();
         const latOffset = ev.deltaY * -0.01;
@@ -352,5 +364,6 @@
   </script>
 </body>
 </html>
+
 
 
