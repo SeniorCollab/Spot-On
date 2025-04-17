@@ -320,7 +320,8 @@
     loadPinsFromFirebase();
 
     // -------------------------------
-    // Mobile-Specific Touch Gestures (Pinch-to-zoom with damping and decoupled pan)
+    // Mobile-Specific Touch Gestures (Separate Pinch-to-Zoom from Pan)
+    // Zoom updates only if there is essentially no panning movement.
     // -------------------------------
     if (window.innerWidth <= 768) {
       const earthDiv = document.getElementById('earth_div');
@@ -336,11 +337,12 @@
       // No maximum limit defined (users can zoom indefinitely)
       const dampingFactor = 0.5; // Damping factor for smoother zooming
       
-      // Handle pinch gesture for zooming
+      // Handle pinch gesture for zooming.
+      // Only update zoom if the finger movements (deltaX and deltaY) are below a very small threshold,
+      // so that any significant panning along the x or y axis cancels out the zoom.
       hammer.on('pinch', function(ev) {
-        /* Only update zoom if the pinch's scale factor is outside the "neutral" zone.
-           This ensures that during a two-finger pan (where scale remains near 1), no zoom occurs.
-        */
+        if (Math.abs(ev.deltaX) > 3 || Math.abs(ev.deltaY) > 3) return;
+        // Also only apply zoom if the scale factor is outside the neutral zone.
         if (ev.scale >= 0.9 && ev.scale <= 1.1) return;
         
         let desiredZoom = currentZoom * (1 + (ev.scale - 1) * dampingFactor);
@@ -348,15 +350,15 @@
         earth.setZoom(desiredZoom);
       });
       
-      // Update currentZoom when the pinch ends
+      // Update currentZoom when the pinch ends.
       hammer.on('pinchend', function(ev) {
         currentZoom = earth.getZoom();
       });
       
-      // Handle pan gesture to reposition the globe without affecting zoom
+      // Handle pan gesture to reposition the globe without affecting the zoom level.
       hammer.on('pan', function(ev) {
         const center = earth.getCenter();
-        // Lower pan sensitivity by using smaller multipliers.
+        // Lower pan sensitivity.
         const latOffset = ev.deltaY * -0.005;
         const lngOffset = ev.deltaX * -0.005; // Inverted so that right-drag rotates right.
         earth.setView([center[0] + latOffset, center[1] + lngOffset], earth.getZoom());
@@ -365,6 +367,7 @@
   </script>
 </body>
 </html>
+
 
 
 
