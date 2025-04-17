@@ -224,9 +224,9 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // Create the globe with WebGL Earth
+    // Create the globe with WebGL Earth.
     const earth = new WE.map('earth_div');
-    earth.setView([0, 0], 2); // Base zoom level on all devices
+    earth.setView([0, 0], 2); // Base zoom level on all devices.
     WE.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors',
       subdomains: 'abc'
@@ -272,7 +272,6 @@
     */
     function addPin(lat, lng, pinData) {
       const marker = WE.marker([lat, lng]).addTo(earth);
-      
       let content = `
         <div class="tron-popup-container">
           <strong>${pinData.title || "Untitled"}</strong><br>
@@ -293,11 +292,10 @@
       const dislikeCount = pinData.dislikes || 0;
       content += `<br><small>Likes: ${likeCount} | Dislikes: ${dislikeCount}</small>`;
       content += "</div>";
-      
       marker.bindPopup(content);
     }
     
-    // Load pins from Firebase and display them on the globe
+    // Load pins from Firebase and display them on the globe.
     function loadPinsFromFirebase() {
       const pinsRef = ref(db, "pins");
       onValue(pinsRef, snapshot => {
@@ -322,6 +320,8 @@
     // -------------------------------
     // Mobile-Specific Touch Gestures (Separate Pinch-to-Zoom from Pan)
     // Zoom only occurs if there is essentially no translation.
+    // Additionally, if the globe is near the North or South Pole (|lat| ≥ 89°),
+    // any pinch gesture that would zoom in (scale > 1) is ignored.
     // -------------------------------
     if (window.innerWidth <= 768) {
       const earthDiv = document.getElementById('earth_div');
@@ -335,38 +335,43 @@
       let currentZoom = 2;
       const minZoom = 2;
       const dampingFactor = 0.5; // Damping for smoother zoom.
-
+      
       // Flag to track whether a pan gesture is in progress.
       let isPanning = false;
       
-      // Listen for panstart and panend events to update the flag.
+      // Update isPanning flag.
       hammer.on('panstart', function(ev) {
         isPanning = true;
       });
-      
       hammer.on('panend', function(ev) {
         isPanning = false;
       });
       
-      // Pinch handler: only update zoom if no panning is occurring.
+      // Pinch handler: update zoom only if no panning and no significant translation.
       hammer.on('pinch', function(ev) {
-        if (isPanning) return; // Ignore pinch events if panning.
-        // Check for any significant translation; if detected, do not zoom.
+        if (isPanning) return; // Ignore if panning.
         if (Math.abs(ev.deltaX) > 15 || Math.abs(ev.deltaY) > 15) return;
-        // Also ignore if the scale factor is nearly neutral.
+        // Only apply zoom if scale factor is meaningfully different from neutral.
         if (ev.scale >= 0.9 && ev.scale <= 1.1) return;
+        
+        // Check if current center is near the poles.
+        const center = earth.getCenter(); // [lat, lon]
+        if (Math.abs(center[0]) >= 89) {
+          // If near the pole and the user is attempting to zoom in (scale > 1), ignore the pinch.
+          if (ev.scale > 1) return;
+        }
         
         let desiredZoom = currentZoom * (1 + (ev.scale - 1) * dampingFactor);
         desiredZoom = Math.max(minZoom, desiredZoom);
         earth.setZoom(desiredZoom);
       });
       
-      // Update currentZoom when the pinch ends.
+      // Update currentZoom on pinch end.
       hammer.on('pinchend', function(ev) {
         currentZoom = earth.getZoom();
       });
       
-      // Pan handler: always update the center without changing zoom.
+      // Pan handler: Update the globe's center without affecting zoom.
       hammer.on('pan', function(ev) {
         const center = earth.getCenter();
         const latOffset = ev.deltaY * -0.005;
@@ -377,6 +382,7 @@
   </script>
 </body>
 </html>
+
 
 
 
