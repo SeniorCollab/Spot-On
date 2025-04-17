@@ -321,28 +321,26 @@
 
     // -------------------------------
     // Mobile-Specific Touch Gestures (Separate Pinch-to-Zoom from Pan)
-    // Zoom updates only if there is essentially no panning movement.
+    // Zoom only occurs if there is essentially no translation along x or y.
     // -------------------------------
     if (window.innerWidth <= 768) {
       const earthDiv = document.getElementById('earth_div');
       const hammer = new Hammer.Manager(earthDiv);
       
-      // Add pinch and pan recognizers
+      // Add pinch and pan recognizers.
       const pinch = new Hammer.Pinch();
       const pan = new Hammer.Pan({ threshold: 10 });
       hammer.add([pinch, pan]);
       
       let currentZoom = 2;
       const minZoom = 2;
-      // No maximum limit defined (users can zoom indefinitely)
-      const dampingFactor = 0.5; // Damping factor for smoother zooming
+      const dampingFactor = 0.5; // Damping for smoother zoom.
       
-      // Handle pinch gesture for zooming.
-      // Only update zoom if the finger movements (deltaX and deltaY) are below a very small threshold,
-      // so that any significant panning along the x or y axis cancels out the zoom.
+      // Pinch handler: Only trigger zoom if no translation is detected.
+      // Here we require both deltaX and deltaY to be virtually zero.
       hammer.on('pinch', function(ev) {
-        if (Math.abs(ev.deltaX) > 3 || Math.abs(ev.deltaY) > 3) return;
-        // Also only apply zoom if the scale factor is outside the neutral zone.
+        if (Math.abs(ev.deltaX) > 15 || Math.abs(ev.deltaY) > 15) return;
+        // Also check that scale factor is meaningfully different from 1.
         if (ev.scale >= 0.9 && ev.scale <= 1.1) return;
         
         let desiredZoom = currentZoom * (1 + (ev.scale - 1) * dampingFactor);
@@ -350,15 +348,14 @@
         earth.setZoom(desiredZoom);
       });
       
-      // Update currentZoom when the pinch ends.
+      // When the pinch ends, update the current zoom level.
       hammer.on('pinchend', function(ev) {
         currentZoom = earth.getZoom();
       });
       
-      // Handle pan gesture to reposition the globe without affecting the zoom level.
+      // Pan handler: Always update the center without affecting zoom.
       hammer.on('pan', function(ev) {
         const center = earth.getCenter();
-        // Lower pan sensitivity.
         const latOffset = ev.deltaY * -0.005;
         const lngOffset = ev.deltaX * -0.005; // Inverted so that right-drag rotates right.
         earth.setView([center[0] + latOffset, center[1] + lngOffset], earth.getZoom());
@@ -367,6 +364,7 @@
   </script>
 </body>
 </html>
+
 
 
 
