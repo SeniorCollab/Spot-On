@@ -336,34 +336,27 @@
       // No maximum limit defined (users can zoom indefinitely)
       const dampingFactor = 0.5; // Damping factor for smoother zooming
       
-      // Flag to track whether a pinch gesture is in progress.
-      let isPinching = false;
-      
-      hammer.on('pinchstart', function(ev) {
-        isPinching = true;
-      });
-      
       // Handle pinch gesture for zooming
       hammer.on('pinch', function(ev) {
-        // Ignore slight pinch variations to avoid accidental zooming during panning
-        if (Math.abs(ev.scale - 1) < 0.1) return;
+        /* Only update zoom if the pinch's scale factor is outside the "neutral" zone.
+           This ensures that during a two-finger pan (where scale remains near 1), no zoom occurs.
+        */
+        if (ev.scale >= 0.9 && ev.scale <= 1.1) return;
+        
         let desiredZoom = currentZoom * (1 + (ev.scale - 1) * dampingFactor);
         desiredZoom = Math.max(minZoom, desiredZoom);
         earth.setZoom(desiredZoom);
       });
       
-      // Update currentZoom and reset the flag when the pinch ends
+      // Update currentZoom when the pinch ends
       hammer.on('pinchend', function(ev) {
         currentZoom = earth.getZoom();
-        isPinching = false;
       });
       
-      // Handle pan gesture to reposition the globe without affecting the zoom level
+      // Handle pan gesture to reposition the globe without affecting zoom
       hammer.on('pan', function(ev) {
-        // If a pinch gesture is in progress, do not update the pan.
-        if (isPinching) return;
         const center = earth.getCenter();
-        // Lower pan sensitivity by halving the multipliers
+        // Lower pan sensitivity by using smaller multipliers.
         const latOffset = ev.deltaY * -0.005;
         const lngOffset = ev.deltaX * -0.005; // Inverted so that right-drag rotates right.
         earth.setView([center[0] + latOffset, center[1] + lngOffset], earth.getZoom());
@@ -372,6 +365,7 @@
   </script>
 </body>
 </html>
+
 
 
 
