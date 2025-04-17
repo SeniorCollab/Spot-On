@@ -82,6 +82,7 @@
       border-radius: 2px;
       box-shadow: 0 0 5px #00ffff;
     }
+
     /* Offcanvas */
     .offcanvas {
       background-color: rgba(0, 0, 0, 0.95);
@@ -206,6 +207,52 @@
       color: #00ffff;
       border: 1px solid #00ffff;
     }
+
+    /* Mobile-Specific Adjustments */
+    @media (max-width: 576px) {
+      /* Offcanvas Toggle Adjustments */
+      #offcanvasToggle {
+        top: 10px;
+        right: 10px;
+        width: 40px;
+        height: 40px;
+      }
+      /* Hamburger Icon becomes thicker on mobile */
+      .hamburger-icon {
+        width: 30px;
+        height: 30px; /* Increased overall height */
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .hamburger-icon span {
+        height: 8px; /* Increased bar thickness */
+        width: 100%;
+        background-color: #00ffff;
+        border-radius: 2px;
+        box-shadow: 0 0 5px #00ffff;
+      }
+      /* Adjust Grid Layout to Single Column for improved readability */
+      #allPinsList,
+      #myPinsList,
+      #allEventsList,
+      #myEventsList,
+      #allMoodList,
+      #myMoodList {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+      /* For tablet devices, update the grid to 2 columns */
+      #allPinsList,
+      #myPinsList,
+      #allEventsList,
+      #myEventsList,
+      #allMoodList,
+      #myMoodList {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
   </style>
 </head>
 <body>
@@ -235,11 +282,7 @@
       </ul>
     </nav>
     <p class="mt-3">Lets get active user.</p>
-
-    <!-- 
-      -------------  ADDED LOGOUT BUTTON HERE  -------------
-      Same style as your map code: a full-width red button at bottom of offcanvas
-    -->
+    <!-- Added Logout Button -->
     <button class="btn btn-danger w-100 mt-3" id="logoutBtn">Log Out</button>
   </div>
 </div>
@@ -309,7 +352,6 @@
         <input type="hidden" id="editPinType" />
         <input type="hidden" id="editPinOwner" />
         <input type="hidden" id="editPinId" />
-
         <div class="mb-3">
           <label for="editPinTitle" class="form-label">Title</label>
           <input type="text" class="form-control" id="editPinTitle" required />
@@ -318,7 +360,6 @@
           <label for="editPinDescription" class="form-label">Description</label>
           <textarea class="form-control" id="editPinDescription" rows="2"></textarea>
         </div>
-        <!-- For mood pins with a link -->
         <div class="mb-3" id="editSongLinkGroup" style="display: none;">
           <label for="editPinSongLink" class="form-label">Song/Video Link</label>
           <input type="url" class="form-control" id="editPinSongLink" />
@@ -366,24 +407,24 @@
   const allMoodList     = document.getElementById("allMoodList");
   const myMoodList      = document.getElementById("myMoodList");
 
-  const bulkDeleteMyPinsBtn    = document.getElementById("bulkDeleteMyPinsBtn");
-  const bulkDeleteMyEventsBtn  = document.getElementById("bulkDeleteMyEventsBtn");
-  const bulkDeleteMyMoodBtn    = document.getElementById("bulkDeleteMyMoodBtn");
+  const bulkDeleteMyPinsBtn   = document.getElementById("bulkDeleteMyPinsBtn");
+  const bulkDeleteMyEventsBtn = document.getElementById("bulkDeleteMyEventsBtn");
+  const bulkDeleteMyMoodBtn   = document.getElementById("bulkDeleteMyMoodBtn");
 
   const loadMoreAllPinsBtn     = document.getElementById("loadMoreAllPinsBtn");
   const loadMoreAllEventsBtn   = document.getElementById("loadMoreAllEventsBtn");
   const loadMoreAllMoodBtn     = document.getElementById("loadMoreAllMoodBtn");
 
   // Edit Modal
-  const editModal        = new bootstrap.Modal(document.getElementById("editModal"));
-  const editForm         = document.getElementById("editForm");
-  const editPinType      = document.getElementById("editPinType");      // "moodPins" or "eventPins"
-  const editPinOwner     = document.getElementById("editPinOwner");     // which user
-  const editPinId        = document.getElementById("editPinId");
-  const editPinTitle     = document.getElementById("editPinTitle");
-  const editPinDesc      = document.getElementById("editPinDescription");
-  const editPinSongLink  = document.getElementById("editPinSongLink");
-  const editSongLinkGroup= document.getElementById("editSongLinkGroup");
+  const editModal          = new bootstrap.Modal(document.getElementById("editModal"));
+  const editForm           = document.getElementById("editForm");
+  const editPinType        = document.getElementById("editPinType");
+  const editPinOwner       = document.getElementById("editPinOwner");
+  const editPinId          = document.getElementById("editPinId");
+  const editPinTitle       = document.getElementById("editPinTitle");
+  const editPinDesc        = document.getElementById("editPinDescription");
+  const editPinSongLink    = document.getElementById("editPinSongLink");
+  const editSongLinkGroup  = document.getElementById("editSongLinkGroup");
 
   // ------------------- Data Storage -------------------
   let allPinsArray = [];
@@ -401,12 +442,10 @@
   // ------------------- Utility Functions -------------------
   function generateEmbedContent(link) {
     if (!link) return "";
-    // Spotify
     if (link.includes("open.spotify.com/track/")) {
       const embedUrl = link.replace("open.spotify.com/track/", "open.spotify.com/embed/track/");
       return `<iframe class="pin-iframe" src="${embedUrl}" allow="encrypted-media" allowfullscreen></iframe>`;
     }
-    // YouTube
     if (link.includes("youtube.com/watch?v=") || link.includes("youtu.be/")) {
       let videoId = "";
       if (link.includes("watch?v=")) {
@@ -417,7 +456,6 @@
       const embedUrl = `https://www.youtube.com/embed/${videoId}`;
       return `<iframe class="pin-iframe" src="${embedUrl}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
     }
-    // Fallback
     return `<iframe class="pin-iframe" src="${link}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
   }
 
@@ -425,7 +463,6 @@
     const card = document.createElement("div");
     card.className = "pin-card";
 
-    // Bulk deletion checkbox (only if it's the owner)
     if (isOwner) {
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
@@ -437,7 +474,6 @@
 
     let html = `<div class="pin-title">${pinObj.title || "Untitled Pin"}</div>`;
     html += `<div class="pin-description">${pinObj.description || ""}</div>`;
-
     if (type === "moodPins" && pinObj.songLink) {
       html += generateEmbedContent(pinObj.songLink);
     }
@@ -448,23 +484,18 @@
       const { lat, lng } = pinObj.geolocation;
       html += `<div class="pin-description mt-1">Location: ${lat}, ${lng}</div>`;
     }
-
     card.innerHTML += html;
 
-    // Edit/Delete if owner
     if (isOwner) {
       const actions = document.createElement("div");
       actions.className = "mt-2";
-
       const editBtn = document.createElement("button");
       editBtn.className = "btn btn-sm btn-outline-secondary me-2";
       editBtn.textContent = "Edit";
       editBtn.addEventListener("click", () => {
-        // Fill modal
         editPinType.value = type;
         editPinOwner.value = ownerUid;
         editPinId.value = pinKey;
-
         editPinTitle.value = pinObj.title || "";
         editPinDesc.value = pinObj.description || "";
         if (type === "moodPins") {
@@ -474,10 +505,8 @@
           editSongLinkGroup.style.display = "none";
           editPinSongLink.value = "";
         }
-
         editModal.show();
       });
-
       const delBtn = document.createElement("button");
       delBtn.className = "btn btn-sm btn-outline-danger";
       delBtn.textContent = "Delete";
@@ -486,16 +515,13 @@
           remove(ref(db, `pins/${ownerUid}/${type}/${pinKey}`));
         }
       });
-
       actions.appendChild(editBtn);
       actions.appendChild(delBtn);
       card.appendChild(actions);
     }
-
     return card;
   }
 
-  // Toggle Sections
   iconNav.addEventListener("click", (e) => {
     if (e.target.matches("button[data-target]")) {
       const targetId = e.target.getAttribute("data-target");
@@ -508,7 +534,6 @@
     }
   });
 
-  // Bulk Deletion
   function bulkDelete(sectionContainerId) {
     const container = document.getElementById(sectionContainerId);
     const checkboxes = container.querySelectorAll(".select-checkbox:checked");
@@ -530,7 +555,6 @@
   bulkDeleteMyEventsBtn.addEventListener("click", () => bulkDelete("myEventsSection"));
   bulkDeleteMyMoodBtn.addEventListener("click", () => bulkDelete("myMoodSection"));
 
-  // Display Pins with Pagination
   function displayPinsInContainer(pinArray, container, displayedCountRef, howMany=20) {
     const end = displayedCountRef + howMany;
     const slice = pinArray.slice(displayedCountRef, end);
@@ -560,7 +584,6 @@
     }
   });
 
-  // Edit Modal Submit
   editForm.addEventListener("submit", (e) => {
     e.preventDefault();
     const pinKey = editPinId.value;
@@ -587,12 +610,10 @@
       });
   });
 
-  // ------------------- LOGOUT HANDLER -------------------
   const logoutBtn = document.getElementById("logoutBtn");
   logoutBtn.addEventListener("click", () => {
     signOut(auth)
       .then(() => {
-        // Redirect or do something else when signed out:
         window.location.href = "../index.html";
       })
       .catch((err) => {
@@ -601,15 +622,12 @@
       });
   });
 
-  // ------------------- Fetch Data -------------------
   onAuthStateChanged(auth, async (user) => {
     if (!user) {
       window.location.href = "user/userlogin.html";
       return;
     }
     currentUser = user;
-
-    // 1) My Pins (real-time listener)
     const myPinsRef = ref(db, `pins/${currentUser.uid}`);
     onValue(myPinsRef, (snapshot) => {
       const data = snapshot.val() || {};
@@ -618,8 +636,6 @@
       myMoodList.innerHTML = "";
       myEventPins = [];
       myMoodPins = [];
-
-      // eventPins
       if (data.eventPins) {
         Object.entries(data.eventPins).forEach(([key, val]) => {
           const card = createPinCard(val, "eventPins", currentUser.uid, key, true);
@@ -628,7 +644,6 @@
           myEventPins.push({key, pin: val});
         });
       }
-      // moodPins
       if (data.moodPins) {
         Object.entries(data.moodPins).forEach(([key, val]) => {
           const card = createPinCard(val, "moodPins", currentUser.uid, key, true);
@@ -639,7 +654,6 @@
       }
     });
 
-    // 2) All Pins (one-time get)
     const pinsRootRef = ref(db, "pins");
     get(query(pinsRootRef, orderByKey()))
       .then((snap) => {
@@ -647,7 +661,6 @@
         let tempAllPins = [];
         let tempAllEvents = [];
         let tempAllMood = [];
-
         Object.entries(allData).forEach(([uid, userPins]) => {
           if (userPins.eventPins) {
             Object.entries(userPins.eventPins).forEach(([pinId, pinVal]) => {
@@ -676,31 +689,24 @@
             });
           }
         });
-
-        // Example sorting by key
         tempAllPins.sort((a, b) => a.key.localeCompare(b.key));
         tempAllEvents.sort((a, b) => a.key.localeCompare(b.key));
         tempAllMood.sort((a, b) => a.key.localeCompare(b.key));
-
         allPinsArray = tempAllPins;
         allEventsArray = tempAllEvents;
         allMoodArray = tempAllMood;
-
         displayedAllPinsCount = 0;
         displayedAllEventsCount = 0;
         displayedAllMoodCount = 0;
-
         allPinsList.innerHTML = "";
         allEventsList.innerHTML = "";
         allMoodList.innerHTML = "";
-
         loadMoreAllPinsBtn.style.display = allPinsArray.length > 20 ? "inline-block" : "none";
         loadMoreAllEventsBtn.style.display = allEventsArray.length > 20 ? "inline-block" : "none";
         loadMoreAllMoodBtn.style.display = allMoodArray.length > 20 ? "inline-block" : "none";
-
-        displayedAllPinsCount    = displayPinsInContainer(allPinsArray, allPinsList, displayedAllPinsCount, 20);
-        displayedAllEventsCount  = displayPinsInContainer(allEventsArray, allEventsList, displayedAllEventsCount, 20);
-        displayedAllMoodCount    = displayPinsInContainer(allMoodArray, allMoodList, displayedAllMoodCount, 20);
+        displayedAllPinsCount = displayPinsInContainer(allPinsArray, allPinsList, displayedAllPinsCount, 20);
+        displayedAllEventsCount = displayPinsInContainer(allEventsArray, allEventsList, displayedAllEventsCount, 20);
+        displayedAllMoodCount = displayPinsInContainer(allMoodArray, allMoodList, displayedAllMoodCount, 20);
       })
       .catch(err => {
         console.error("Error fetching all pins:", err);
@@ -712,3 +718,4 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+

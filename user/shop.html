@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Shop - Spot On</title>
 
@@ -161,6 +161,44 @@
       background-color: rgba(0,0,0,0.8);
       color: #00ffff;
       border: 1px solid #00ffff;
+    }
+
+    /* Mobile-Specific Adjustments */
+    @media (max-width: 576px) {
+      /* Offcanvas Toggle Adjustments */
+      #offcanvasToggle {
+        top: 10px;
+        right: 10px;
+        width: 40px;
+        height: 40px;
+      }
+      /* Hamburger Icon becomes thicker on mobile */
+      .hamburger-icon {
+        width: 30px;
+        height: 30px; /* Increased overall height */
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .hamburger-icon span {
+        height: 8px; /* Increased bar thickness */
+        width: 100%;
+        background-color: #00ffff;
+        border-radius: 2px;
+        box-shadow: 0 0 5px #00ffff;
+      }
+      /* Optionally, adjust container padding */
+      .container {
+        padding-top: 60px;
+        padding-bottom: 1.5rem;
+      }
+      /* Adjust toggle nav button padding/font-size if needed */
+      .toggle-nav button {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+      }
+    }
+    @media (max-width: 768px) {
+      /* For tablets, Bootstrap grid classes handle columns (row-cols-1 row-cols-md-2 row-cols-lg-3) */
     }
   </style>
 </head>
@@ -539,3 +577,4 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+

@@ -68,6 +68,35 @@
       font-weight: bold;
       text-shadow: 0 0 3px #00ffff;
     }
+
+    /* Mobile-Specific Adjustments */
+    @media (max-width: 576px) {
+      body {
+        padding-top: 40px;
+      }
+      .container {
+        padding: 1rem;
+      }
+      .card {
+        max-width: 90%;
+      }
+      .card-title {
+        font-size: 1.8rem;
+      }
+      .btn-primary {
+        font-size: 1rem;
+        padding: 0.75rem 1.5rem;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .card-title {
+        font-size: 2rem;
+      }
+      .btn-primary {
+        font-size: 1.1rem;
+      }
+    }
   </style>
 </head>
 <body>
@@ -137,3 +166,4 @@
   </script>
 </body>
 </html>
+
