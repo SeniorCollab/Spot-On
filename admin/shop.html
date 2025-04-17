@@ -177,6 +177,39 @@
       color: #ff9900;
       border: 1px solid #ff9900;
     }
+
+    /* Mobile-Specific Adjustments */
+    @media (max-width: 576px) {
+      /* Offcanvas Toggle Adjustments */
+      #offcanvasToggle {
+        top: 10px;
+        right: 10px;
+        width: 40px;
+        height: 40px;
+      }
+      /* Thicker Hamburger Icon on Mobile */
+      .hamburger-icon {
+        width: 30px;
+        height: 30px; /* Increased overall height */
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .hamburger-icon span {
+        height: 8px; /* Increased bar thickness */
+        width: 100%;
+        background-color: #ff9900;
+        border-radius: 2px;
+        box-shadow: 0 0 5px #ff9900;
+      }
+      /* Optionally, adjust container padding if needed */
+      .container {
+        padding-top: 60px;
+        padding-bottom: 1.5rem;
+      }
+    }
+    @media (max-width: 768px) {
+      /* Tablet-specific adjustments if necessary */
+    }
   </style>
 </head>
 <body>
@@ -580,3 +613,4 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+

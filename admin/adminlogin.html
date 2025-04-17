@@ -16,6 +16,54 @@
       color: #ff3300;        /* bright Tron orange/red */
       padding-top: 60px;
     }
+    /* Offcanvas Toggle (Hamburger) */
+    #offcanvasToggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1050;
+      background: none;
+      border: none;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .hamburger-icon {
+      width: 30px;
+      height: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .hamburger-icon span {
+      display: block;
+      height: 4px;
+      width: 100%;
+      background-color: #ff3300;
+      border-radius: 2px;
+      box-shadow: 0 0 5px #ff3300;
+    }
+    /* Offcanvas Navigation (optional) */
+    .offcanvas {
+      background-color: rgba(0,0,0,0.95);
+      border-left: 2px solid #ff3300;
+    }
+    .offcanvas-header,
+    .offcanvas-body,
+    .offcanvas-title {
+      color: #ff3300;
+    }
+    .offcanvas .nav-link {
+      color: #ff3300;
+      border-bottom: 1px solid rgba(255,51,0,0.2);
+      padding: 0.75rem 1rem;
+    }
+    .offcanvas .nav-link:hover,
+    .offcanvas .nav-link.active {
+      background-color: rgba(255,102,0,0.5);
+    }
     /* Center the card vertically and horizontally */
     .container {
       height: 100vh;
@@ -26,15 +74,15 @@
     /* Card style in Tron orange */
     .card {
       background: rgba(63, 0, 0, 0.85);
-      border: 1px solid #ff3300;     /* orange border */
-      box-shadow: 0 0 15px #ff3300;  /* glow effect */
+      border: 1px solid #ff3300;
+      box-shadow: 0 0 15px #ff3300;
       border-radius: 1rem;
-      color: #ff3300;               /* text color inside the card */
+      color: #ff3300;
     }
     .card-title {
       text-align: center;
       margin-bottom: 1rem;
-      text-shadow: 0 0 5px #ff3300; /* glow effect on card title */
+      text-shadow: 0 0 5px #ff3300;
     }
     /* Form Controls in Tron orange */
     .form-control {
@@ -70,9 +118,62 @@
       font-weight: bold;
       text-shadow: 0 0 3px #ff3300;
     }
+    /* Mobile-Specific Adjustments */
+    @media (max-width: 576px) {
+      /* Reduce offcanvas toggle dimensions and reposition for smaller screens */
+      #offcanvasToggle {
+        top: 10px;
+        right: 10px;
+        width: 40px;
+        height: 40px;
+      }
+      /* Increase hamburger icon overall height and bar thickness for touch-friendliness */
+      .hamburger-icon {
+        width: 30px;
+        height: 30px;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .hamburger-icon span {
+        height: 8px;
+        width: 100%;
+        background-color: #ff3300;
+        border-radius: 2px;
+        box-shadow: 0 0 5px #ff3300;
+      }
+      /* Optionally reduce container padding if needed */
+      .container {
+        padding-top: 40px;
+      }
+    }
   </style>
 </head>
 <body>
+  <!-- Offcanvas Toggle (Hamburger) -->
+  <button class="custom-toggle-btn" type="button" id="offcanvasToggle" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar">
+    <div class="hamburger-icon">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  </button>
+
+  <!-- Offcanvas Navigation (optional) -->
+  <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNavbar">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title">Admin Navigation</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+      <nav class="navbar">
+        <ul class="navbar-nav">
+          <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+          <li class="nav-item"><a class="nav-link" href="adminlogin.html">Login</a></li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+
   <div class="container">
     <div class="card shadow-sm" style="width: 100%; max-width: 400px;">
       <div class="card-body">
@@ -142,4 +243,5 @@
   </script>
 </body>
 </html>
+
 
