@@ -115,10 +115,61 @@
       background-color: #33ffff;
       border-color: #33ffff;
     }
-    /* Link styling */
+    /* Link Styling */
     a {
       color: #00ffff;
       text-decoration: underline;
+    }
+
+    /* Mobile-Specific Adjustments */
+    @media (max-width: 576px) {
+      /* Reduce offcanvas toggle and hamburger icon dimensions on very small screens */
+      #offcanvasToggle {
+        top: 10px;
+        right: 10px;
+        width: 40px;
+        height: 40px;
+      }
+      .hamburger-icon {
+        width: 20px;
+        height: 15px;
+      }
+      .hamburger-icon span {
+        height: 3px;
+      }
+      /* Adjust padding and container width for better fit */
+      body {
+        padding-top: 50px;
+      }
+      .register-container {
+        width: 90%;
+        padding: 1.5rem;
+      }
+      .register-container h2 {
+        font-size: 1.5rem;
+      }
+      .form-control {
+        font-size: 0.9rem;
+      }
+      .btn-primary {
+        font-size: 0.9rem;
+      }
+    }
+
+    @media (max-width: 768px) {
+      /* Tablet adjustments */
+      .register-container {
+        width: 85%;
+      }
+      .register-container h2 {
+        font-size: 1.75rem;
+      }
+      .form-control {
+        font-size: 1rem;
+      }
+      .btn-primary {
+        font-size: 1rem;
+      }
     }
   </style>
 </head>
@@ -245,3 +296,4 @@
 
 </body>
 </html>
+

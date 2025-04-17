@@ -128,6 +128,46 @@
       padding-top: 80px;
       padding-bottom: 2rem;
     }
+
+    /* Mobile-Specific Adjustments */
+    @media (max-width: 576px) {
+      /* Reduce offcanvas toggle and hamburger icon dimensions */
+      #offcanvasToggle {
+        top: 10px;
+        right: 10px;
+        width: 40px;
+        height: 40px;
+      }
+      .hamburger-icon {
+        width: 20px;
+        height: 15px;
+      }
+      .hamburger-icon span {
+        height: 3px;
+      }
+      /* Page Header adjustments */
+      .page-header h1 {
+        font-size: 1.8rem;
+      }
+      .page-header p {
+        font-size: 1rem;
+      }
+      /* Container spacing for smaller viewports */
+      .container {
+        padding-top: 60px;
+        padding-bottom: 1.5rem;
+      }
+    }
+
+    @media (max-width: 768px) {
+      /* Adjust page header for tablets */
+      .page-header h1 {
+        font-size: 2rem;
+      }
+      .page-header p {
+        font-size: 1.1rem;
+      }
+    }
   </style>
 </head>
 <body>
@@ -210,3 +250,4 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+

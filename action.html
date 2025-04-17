@@ -171,6 +171,66 @@
       grid-template-columns: repeat(3, 1fr);
       gap: 1rem;
     }
+
+    /* Mobile-Specific Adjustments */
+    @media (max-width: 576px) {
+      /* Offcanvas Toggle and Hamburger Icon */
+      #offcanvasToggle {
+        top: 10px;
+        right: 10px;
+        width: 40px;
+        height: 40px;
+      }
+      .hamburger-icon {
+        width: 20px;
+        height: 15px;
+      }
+      .hamburger-icon span {
+        height: 3px;
+      }
+
+      /* Horizontal Icon Navigation */
+      .icon-nav {
+        padding: 0.5rem;
+        gap: 0.5rem;
+      }
+      .icon-nav button {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+      }
+      
+      /* Page Header */
+      .page-header h2 {
+        font-size: 1.5rem;
+      }
+      
+      /* Adjust grid layout to a single column */
+      #allPinsList,
+      #allEventsList,
+      #allMoodList {
+        grid-template-columns: 1fr;
+      }
+      
+      /* Resize iframe heights on very small screens */
+      .pin-iframe {
+        height: 180px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      /* For tablet devices, update the grid to 2 columns */
+      #allPinsList,
+      #allEventsList,
+      #allMoodList {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .page-header h2 {
+        font-size: 1.75rem;
+      }
+      .icon-nav button {
+        font-size: 0.85rem;
+      }
+    }
   </style>
 </head>
 <body>
@@ -412,3 +472,4 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
