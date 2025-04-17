@@ -263,7 +263,7 @@
     }
     
     /*
-      Create a marker on the globe, and bind a popup that displays:
+      Create a marker on the globe and bind a popup that displays:
       - Title
       - Description
       - Embedded media (if any)
@@ -338,12 +338,11 @@
       
       // Handle pinch gesture for zooming
       hammer.on('pinch', function(ev) {
-        // Ignore very slight pinch variations to avoid accidental zooming during panning
+        // Ignore slight pinch variations to avoid accidental zooming during panning
         if (Math.abs(ev.scale - 1) < 0.1) return;
 
         // Calculate the desired zoom with damping applied:
         let desiredZoom = currentZoom * (1 + (ev.scale - 1) * dampingFactor);
-        // Enforce the minimum zoom level (no max bound)
         desiredZoom = Math.max(minZoom, desiredZoom);
         earth.setZoom(desiredZoom);
       });
@@ -357,13 +356,15 @@
       hammer.on('pan', function(ev) {
         const center = earth.getCenter();
         const latOffset = ev.deltaY * -0.01;
-        const lngOffset = ev.deltaX * 0.01;
+        // Invert horizontal offset so that dragging right rotates the globe right
+        const lngOffset = ev.deltaX * -0.01;
         earth.setView([center[0] + latOffset, center[1] + lngOffset], earth.getZoom());
       });
     }
   </script>
 </body>
 </html>
+
 
 
 
