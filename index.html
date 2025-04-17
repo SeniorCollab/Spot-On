@@ -227,8 +227,9 @@
     // Create the globe with WebGL Earth
     const earth = new WE.map('earth_div');
     earth.setView([0, 0], 2); // Base zoom level on all devices
-    WE.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
-      attribution: "Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
+    WE.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      subdomains: 'abc'
     }).addTo(earth);
 
     /*
@@ -335,34 +336,43 @@
       // No maximum limit defined (users can zoom indefinitely)
       const dampingFactor = 0.5; // Damping factor for smoother zooming
       
+      // Flag to track whether a pinch gesture is in progress.
+      let isPinching = false;
+      
+      hammer.on('pinchstart', function(ev) {
+        isPinching = true;
+      });
+      
       // Handle pinch gesture for zooming
       hammer.on('pinch', function(ev) {
         // Ignore slight pinch variations to avoid accidental zooming during panning
         if (Math.abs(ev.scale - 1) < 0.1) return;
-
-        // Calculate the desired zoom with damping applied:
         let desiredZoom = currentZoom * (1 + (ev.scale - 1) * dampingFactor);
         desiredZoom = Math.max(minZoom, desiredZoom);
         earth.setZoom(desiredZoom);
       });
       
-      // Update currentZoom when the pinch ends
+      // Update currentZoom and reset the flag when the pinch ends
       hammer.on('pinchend', function(ev) {
         currentZoom = earth.getZoom();
+        isPinching = false;
       });
       
       // Handle pan gesture to reposition the globe without affecting the zoom level
       hammer.on('pan', function(ev) {
+        // If a pinch gesture is in progress, do not update the pan.
+        if (isPinching) return;
         const center = earth.getCenter();
-        const latOffset = ev.deltaY * -0.01;
-        // Invert horizontal offset so that dragging right rotates the globe right
-        const lngOffset = ev.deltaX * -0.01;
+        // Lower pan sensitivity by halving the multipliers
+        const latOffset = ev.deltaY * -0.005;
+        const lngOffset = ev.deltaX * -0.005; // Inverted so that right-drag rotates right.
         earth.setView([center[0] + latOffset, center[1] + lngOffset], earth.getZoom());
       });
     }
   </script>
 </body>
 </html>
+
 
 
 
