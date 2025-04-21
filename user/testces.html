@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <!-- Viewport Meta Tag for Mobile -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Interactive Map with Editable Pins</title>
   <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -190,6 +192,39 @@
       border: 2px solid #00ffff;
       box-shadow: 0 0 5px #00ffff;
     }
+    /* Mobile-Specific CSS Enhancements */
+    @media (max-width: 768px) {
+      /* Offcanvas sidebar drops down with Tron glitch animation */
+      .offcanvas {
+        top: 0;
+        right: 0;
+        left: 0;
+        bottom: auto;
+        border-left: none;
+        border-top: 2px solid #00ffff;
+        animation: glitchDrop 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+      }
+      /* Tron glitch effect keyframes */
+      @keyframes glitchDrop {
+        0% {
+          transform: translateY(-100%);
+          opacity: 0;
+        }
+        50% {
+          transform: translateY(10px);
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+      /* Adjust hamburger button size on mobile */
+      .hamburger-btn {
+        top: 10px;
+        right: 10px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -270,14 +305,12 @@
           <button class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
-
           <div id="modalChoice" class="text-center">
             <p>Select Pin Type:</p>
             <button class="btn btn-outline-primary mb-2" id="modalBtnSimple">Pin Event</button>
             <button class="btn btn-outline-secondary mb-2" id="modalBtnDetailed">Pin Mood</button>
             <button class="btn btn-outline-success mb-2" id="modalBtnShop">Pin Shop Item</button>
           </div>
-
           <!-- Event Pin Form -->
           <form id="simpleModalForm" class="d-none blue-gradient-form">
             <label for="modalTitleSimple" class="form-label">Title</label>
@@ -296,7 +329,6 @@
             <button type="submit" class="btn btn-primary w-100">Save Event Pin</button>
             <button type="button" class="btn btn-link mt-2" id="backFromSimpleModal">← Back</button>
           </form>
-
           <!-- Mood Pin Form -->
           <form id="detailedModalForm" class="d-none blue-gradient-form">
             <label for="modalTitleDet" class="form-label">Title</label>
@@ -312,7 +344,6 @@
             <button type="submit" class="btn btn-primary w-100">Save Mood Pin</button>
             <button type="button" class="btn btn-link mt-2" id="backFromDetailedModal">← Back</button>
           </form>
-
           <!-- Shop Pin Form -->
           <form id="shopModalForm" class="d-none blue-gradient-form">
             <label for="modalTitleShop" class="form-label">Title</label>
@@ -332,17 +363,24 @@
             <button type="submit" class="btn btn-success w-100">Save Shop Item</button>
             <button type="button" class="btn btn-link mt-2" id="backFromShopModal">← Back</button>
           </form>
-
         </div>
       </div>
     </div>
   </div>
 
+  <!-- Iframe Integration for AI Chatbot -->
+  <iframe 
+      src="https://my-awesome-chatbot-smoky-rho.vercel.app/login?callbackUrl=https%3A%2F%2Fmy-awesome-chatbot-smoky-rho.vercel.app%2F" 
+      style="position: fixed; bottom: 20px; right: 20px; width: 350px; height: 500px; border: none; z-index: 1000;">
+  </iframe>
+
   <!-- WebGL Earth & Bootstrap JS -->
   <script src="https://www.webglearth.com/v2/api.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Include Hammer.js for mobile touch gestures -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
 
-  <!-- Firebase v10+ -->
+  <!-- Firebase v10+ and App Logic -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getDatabase, ref, push, set, onValue, get, update, remove } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
@@ -386,12 +424,10 @@
     const earth = new WE.map("earth_div");
     earth.setView([0, 0], 2);
     WE.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
-        attribution: "Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
+      attribution: "Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
     }).addTo(earth);
-      
-      
 
-    // Double-click detection
+    // Double-click detection for opening the pin modal
     let lastClickTime = 0;
     const clickThreshold = 350; // ms
 
@@ -431,7 +467,6 @@
     logoutBtn.addEventListener("click", () => {
       signOut(auth)
         .then(() => {
-          // Signed out successfully
           window.location.href = "../index.html";
         })
         .catch(err => {
@@ -450,7 +485,6 @@
 
       const path = showOnlyMyPins ? `pins/${currentUser.uid}` : "pins";
       onValue(ref(db, path), snapshot => {
-        // Clear out old markers again on each update
         markersList.forEach(m => m.removeFrom(earth));
         markersList = [];
 
@@ -458,10 +492,8 @@
         if (!data) return;
 
         if (showOnlyMyPins) {
-          // data = { eventPins: {...}, moodPins: {...}, shopPins: {...} }
           loadUserPinTypes(currentUser.uid, data);
         } else {
-          // data = { userId1: {...}, userId2: {...}, ... }
           Object.entries(data).forEach(([userId, userData]) => {
             loadUserPinTypes(userId, userData);
           });
@@ -473,8 +505,6 @@
       ["eventPins", "moodPins", "shopPins"].forEach(pinType => {
         const group = userData[pinType];
         if (!group) return;
-
-        // For each pin
         Object.entries(group).forEach(([pinId, pin]) => {
           if (pin.geolocation) {
             const marker = addPin(
@@ -496,12 +526,10 @@
     ------------------------------------------------------------------ */
     function generateEmbedContent(link) {
       if (!link) return "";
-      // Spotify
       if (link.includes("open.spotify.com/track/")) {
         const embedUrl = link.replace("open.spotify.com/track/", "open.spotify.com/embed/track/");
         return `<iframe class="pin-iframe" src="${embedUrl}" allow="encrypted-media" allowfullscreen></iframe>`;
       }
-      // YouTube
       if (link.includes("youtube.com/watch?v=") || link.includes("youtu.be/")) {
         let videoId = "";
         if (link.includes("watch?v=")) {
@@ -513,14 +541,12 @@
         const embedUrl = `https://www.youtube.com/embed/${videoId}`;
         return `<iframe class="pin-iframe" src="${embedUrl}" allowfullscreen></iframe>`;
       }
-      // MP4 or MP3
       if (link.endsWith(".mp4")) {
         return `<video class="pin-video" src="${link}" controls></video>`;
       }
       if (link.endsWith(".mp3")) {
         return `<audio class="pin-audio" src="${link}" controls></audio>`;
       }
-      // fallback
       return `<iframe class="pin-iframe" src="${link}" allowfullscreen></iframe>`;
     }
 
@@ -529,26 +555,17 @@
     ------------------------------------------------------------------ */
     function addPin(lat, lng, pinData, userId, pinId, pinType) {
       const marker = WE.marker([lat, lng]).addTo(earth);
-
       let content = `<div class="pin-popup-content">`;
-
-      // Title/description
       content += `
         <strong>Title:</strong> ${pinData.title || "Untitled"}<br>
         <strong>Description:</strong> ${pinData.description || ""}
       `;
-
-      // If there's a link
       if (pinData.songLink) {
         content += "<br>" + generateEmbedContent(pinData.songLink);
       }
-
-      // If there's an image
       if (pinData.imageUrl) {
         content += `<br><img class="pin-image" src="${pinData.imageUrl}" alt="Pin Image">`;
       }
-
-      // Likes / Dislikes (buttons still here for owners)
       const likesCount = pinData.likes || 0;
       const dislikesCount = pinData.dislikes || 0;
       content += `
@@ -559,7 +576,6 @@
                 data-pin-id="${pinId}">
           Like (${likesCount})
         </button>
-
         <button class="dislike-button btn btn-outline-light btn-sm"
                 data-user-id="${userId}"
                 data-pin-type="${pinType}"
@@ -567,8 +583,6 @@
           Dislike (${dislikesCount})
         </button>
       `;
-
-      // If current user is the owner => show Edit & Delete
       if (userId === currentUser.uid) {
         content += `
           <br>
@@ -586,9 +600,7 @@
           </button>
         `;
       }
-
       content += `</div>`;
-
       marker.bindPopup(content);
       return marker;
     }
@@ -656,7 +668,6 @@
       const snapshot = await get(pinRef);
       if (!snapshot.exists()) return;
       const pinData = snapshot.val();
-
       editingPinId = pinId;
       editingPinType = pinType;
 
@@ -690,7 +701,6 @@
         hideForms();
         document.getElementById("shopModalForm").classList.remove("d-none");
       }
-
       modal.show();
     }
 
@@ -876,9 +886,60 @@
       ["modalChoice", "simpleModalForm", "detailedModalForm", "shopModalForm"]
         .forEach(id => document.getElementById(id).classList.add("d-none"));
     }
+
+    /* ------------------------------------------------------------------
+       Mobile Touch Gesture Integration Using Hammer.js
+    ------------------------------------------------------------------ */
+    if (window.innerWidth <= 768) {
+      const earthDiv = document.getElementById('earth_div');
+      const hammer = new Hammer.Manager(earthDiv);
+      
+      // Add pinch and pan recognizers.
+      const pinch = new Hammer.Pinch();
+      const pan = new Hammer.Pan({ threshold: 10 });
+      hammer.add([pinch, pan]);
+      
+      let currentZoom = 2;
+      const minZoom = 2;
+      const dampingFactor = 0.5;
+      let isPanning = false;
+      
+      hammer.on('panstart', function(ev) {
+        isPanning = true;
+      });
+      hammer.on('panend', function(ev) {
+        isPanning = false;
+      });
+      
+      hammer.on('pinch', function(ev) {
+        if (isPanning) return;
+        if (Math.abs(ev.deltaX) > 15 || Math.abs(ev.deltaY) > 15) return;
+        if (ev.scale >= 0.9 && ev.scale <= 1.1) return;
+        const center = earth.getCenter();
+        if (Math.abs(center[0]) >= 89) {
+          if (ev.scale > 1) return;
+        }
+        let desiredZoom = currentZoom * (1 + (ev.scale - 1) * dampingFactor);
+        desiredZoom = Math.max(minZoom, desiredZoom);
+        earth.setZoom(desiredZoom);
+      });
+      
+      hammer.on('pinchend', function(ev) {
+        currentZoom = earth.getZoom();
+      });
+      
+      hammer.on('pan', function(ev) {
+        const center = earth.getCenter();
+        const latOffset = ev.deltaY * -0.005;
+        const lngOffset = ev.deltaX * -0.005;
+        earth.setView([center[0] + latOffset, center[1] + lngOffset], earth.getZoom());
+      });
+    }
   </script>
 </body>
 </html>
+
+
 
 
 
