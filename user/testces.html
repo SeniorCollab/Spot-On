@@ -380,12 +380,48 @@
   <!-- Include Hammer.js for mobile touch gestures -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
 
-  <!-- Firebase v10+ and App Logic -->
+  <!-- Firebase v10+ and App Logic, along with Deepseek Integration -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getDatabase, ref, push, set, onValue, get, update, remove } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 
+    // --- Deepseek API Integration ---
+    async function callDeepseek(prompt) {
+      // WARNING: Hard-coding API keys is not secure. In production, store the key in a secure environment variable.
+      const deepseekAPIKey = "sk-720f456a608d4aed9866c60a95da7584";
+      const endpoint = "https://api.deepseek.com/v1/chat"; // Replace with actual Deepseek API endpoint if different.
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${deepseekAPIKey}`
+          },
+          body: JSON.stringify({ prompt })
+        });
+        if (!response.ok) {
+          throw new Error(`Deepseek API error: ${response.statusText}`);
+        }
+        const data = await response.json();
+        console.log("Deepseek response:", data);
+        return data;
+      } catch (err) {
+        console.error("Error calling Deepseek API:", err);
+        return null;
+      }
+    }
+
+    // Optionally, test the Deepseek API on load (remove or modify as needed)
+    document.addEventListener("DOMContentLoaded", () => {
+      callDeepseek("Hello, how can I help you today?").then(response => {
+        if(response) {
+          console.log("Received response from Deepseek:", response);
+        }
+      });
+    });
+
+    // --- Firebase Initialization ---
     const firebaseConfig = {
       apiKey: "AIzaSyADk7if-797jFI3Y3IUCnCXFSlOsFmX_3k",
       authDomain: "spoton-cit481.firebaseapp.com",
@@ -938,6 +974,7 @@
   </script>
 </body>
 </html>
+
 
 
 
