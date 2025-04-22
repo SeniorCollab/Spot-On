@@ -38,7 +38,7 @@
   <script type="module">
     async function callDeepseek(prompt) {
       const deepseekAPIKey = "sk-720f456a608d4aed9866c60a95da7584"; // Replace with secure storage in production
-      const endpoint = "https://api.deepseek.com/v1/chat"; // Update if needed per Deepseek documentation
+      const endpoint = "https://api.deepseek.com/v3/chat"; // Update if needed per Deepseek documentation
       try {
         const response = await fetch(endpoint, {
           method: "POST",
