@@ -381,7 +381,7 @@
 
   <!-- Firebase v10+ and App Logic -->
   <script type="module">
-    import { fetchAISuggestion } from "/js/aiSuggest.js";   /* ← NEW */
+    import { fetchAISuggestion } from "./js/aiSuggest.js";   /* ← NEW */
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getDatabase, ref, push, set, onValue, get, update, remove } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
