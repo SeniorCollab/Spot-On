@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <!-- Viewport Meta Tag for Mobile -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive Map with Editable Pins</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Tron-like font from Google Fonts (Orbitron) -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap">
+  <style>
+    /* Global Styles */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Orbitron', sans-serif;
+      color: #00ffff;  /* neon cyan as base text color */
+    }
+    /* Video Background */
+    #bgvideo {
+      position: fixed;
+      top: 0;
+      left: 0;
+      min-width: 100%;
+      min-height: 100%;
+      z-index: -2;
+      object-fit: cover;
+      opacity: 1;
+    }
+    /* Globe Container (WebGL Earth) */
+    #earth_div {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+    /* Custom Hamburger Button styling */
+    .hamburger-btn {
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      z-index: 20;
+      position: fixed;
+      top: 20px;
+      right: 20px;
+    }
+    .hamburger-icon {
+      width: 30px;
+      height: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .hamburger-icon span {
+      display: block;
+      height: 4px;
+      width: 100%;
+      background-color: #00ffff;
+      border-radius: 2px;
+      box-shadow: 0 0 5px #00ffff;
+    }
+    /* Tron-inspired Offcanvas Sidebar */
+    .offcanvas {
+      background-color: rgba(0, 0, 0, 0.95);
+      border-left: 2px solid #00ffff;
+    }
+    .offcanvas-header,
+    .offcanvas-body,
+    .offcanvas-title {
+      color: #00ffff;
+    }
+    /* Nav-link styling for consistency */
+    .offcanvas .nav-link {
+      color: #00ffff;
+      border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+      padding: 0.75rem 1rem;
+    }
+    .offcanvas .nav-link:hover,
+    .offcanvas .nav-link.active {
+      background-color: rgba(0, 31, 63, 0.5);
+    }
+    /* Tron-style gradient form (for modals & forms) */
+    .blue-gradient-form {
+      background: rgba(0, 31, 63, 0.85);
+      border: 1px solid #00ffff;
+      box-shadow: 0 0 10px #00ffff;
+      color: #00ffff;
+      padding: 1em;
+      border-radius: 10px;
+    }
+    /* Tron-style embedded media elements */
+    .pin-iframe,
+    .pin-video,
+    .pin-audio {
+      display: block;
+      margin-top: 8px;
+      max-width: 100%;
+      border: none;
+      box-shadow: 0 0 5px #00ffff;
+    }
+    .pin-iframe {
+      height: 150px;
+    }
+    .pin-image {
+      margin-top: 8px;
+      max-width: 100%;
+      height: auto;
+      border-radius: 5px;
+      border: 2px solid #00ffff;
+      box-shadow: 0 0 5px #00ffff;
+    }
+    /* Tron-styled popup container for forms and marker popups */
+    .tron-popup-container {
+      background-color: rgba(0, 0, 0, 0.9);
+      border: 2px solid #00ffff;
+      border-radius: 10px;
+      padding: 1rem;
+      box-shadow: 0 0 10px #00ffff;
+      color: #00ffff;
+    }
+    /* Mobile-Specific Styles */
+    @media (max-width: 768px) {
+      /* Offcanvas sidebar drops down with Tron glitch animation */
+      .offcanvas {
+        top: 0;
+        right: 0;
+        left: 0;
+        bottom: auto;
+        border-left: none;
+        border-top: 2px solid #00ffff;
+        animation: glitchDrop 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+      }
+      /* Tron glitch effect keyframes */
+      @keyframes glitchDrop {
+        0% {
+          transform: translateY(-100%);
+          opacity: 0;
+        }
+        50% {
+          transform: translateY(10px);
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+      /* Adjust hamburger button size on mobile */
+      .hamburger-btn {
+        top: 10px;
+        right: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Background Video -->
+  <video autoplay muted loop id="bgvideo">
+    <source src="stars.mp4" type="video/mp4">
+  </video>
+
+  <!-- WebGL Earth Container -->
+  <div id="earth_div"></div>
+
+  <!-- Custom Hamburger Button (Offcanvas Toggle) -->
+  <button class="hamburger-btn" type="button" id="offcanvasToggle" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar" aria-controls="offcanvasNavbar">
+    <div class="hamburger-icon">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  </button>
+
+  <!-- Offcanvas Sidebar for Navigation -->
+  <div class="offcanvas offcanvas-end" id="offcanvasNavbar" tabindex="-1" aria-labelledby="offcanvasNavbarLabel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id="offcanvasNavbarLabel">Spot On</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+      <nav class="navbar">
+        <ul class="navbar-nav">
+          <li class="nav-item"><a class="nav-link active" href="index.html">Home</a></li>
+          <li class="nav-item"><a class="nav-link" href="shop.html">My Store</a></li>
+          <li class="nav-item"><a class="nav-link" href="action.html">See Our Pins</a></li>
+          <li class="nav-item"><a class="nav-link" href="aboutus.html">About Us</a></li>
+          <li class="nav-item"><a class="nav-link" href="user/userlogin.html">User</a></li>
+          <li class="nav-item"><a class="nav-link" href="admin/adminlogin.html">Admin</a></li>
+          <li class="nav-item"><a class="nav-link" href="register.html">Sign Up</a></li>
+        </ul>
+      </nav>
+      <p>Create an account or login to start your journey</p>
+    </div>
+  </div>
+
+  <!-- WebGL Earth + Bootstrap JS -->
+  <script src="https://www.webglearth.com/v2/api.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Hammer.js for touch gestures (CDN) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+  
+  <!-- Firebase SDK & Pin Loader -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyADk7if-797jFI3Y3IUCnCXFSlOsFmX_3k",
+      authDomain: "spoton-cit481.firebaseapp.com",
+      databaseURL: "https://spoton-cit481-default-rtdb.firebaseio.com",
+      projectId: "spoton-cit481",
+      storageBucket: "spoton-cit481.appspot.com",
+      messagingSenderId: "753873898041",
+      appId: "1:753873898041:web:bde5e8f86aea63b175dbe8"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Create the globe with WebGL Earth.
+    const earth = new WE.map('earth_div');
+    earth.setView([0, 0], 2); // Base zoom level on all devices.
+    WE.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+      attribution: "Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
+    }).addTo(earth);
+
+    /*
+      Utility to embed Spotify/YouTube/MP3/MP4 links.
+      Returns HTML to be appended in the marker's popup.
+    */
+    function generateEmbedContent(link) {
+      if (!link) return "";
+      if (link.includes("open.spotify.com/track/")) {
+        const embedUrl = link.replace("open.spotify.com/track/", "open.spotify.com/embed/track/");
+        return `<iframe class="pin-iframe" src="${embedUrl}" allow="encrypted-media" allowfullscreen></iframe>`;
+      }
+      if (link.includes("youtube.com/watch?v=") || link.includes("youtu.be/")) {
+        let videoId = "";
+        if (link.includes("watch?v=")) {
+          videoId = link.split("watch?v=")[1];
+          if (videoId.includes("&")) videoId = videoId.split("&")[0];
+        } else {
+          videoId = link.split("youtu.be/")[1];
+        }
+        const embedUrl = `https://www.youtube.com/embed/${videoId}`;
+        return `<iframe class="pin-iframe" src="${embedUrl}" allowfullscreen></iframe>`;
+      }
+      if (link.endsWith(".mp4")) {
+        return `<video class="pin-video" src="${link}" controls></video>`;
+      }
+      if (link.endsWith(".mp3")) {
+        return `<audio class="pin-audio" src="${link}" controls></audio>`;
+      }
+      return `<iframe class="pin-iframe" src="${link}" allowfullscreen></iframe>`;
+    }
+    
+    /*
+      Create a marker on the globe and bind a popup that displays:
+      - Title
+      - Description
+      - Embedded media (if any)
+      - Read-only likes/dislikes
+      All wrapped in a Tron-themed container.
+    */
+    function addPin(lat, lng, pinData) {
+      const marker = WE.marker([lat, lng]).addTo(earth);
+      let content = `
+        <div class="tron-popup-container">
+          <strong>${pinData.title || "Untitled"}</strong><br>
+          ${pinData.description || ""}
+      `;
+      if (pinData.songLink) {
+        content += `<br>${generateEmbedContent(pinData.songLink)}`;
+      }
+      if (pinData.imageUrl) {
+        content += `
+          <br>
+          <img src="${pinData.imageUrl}" 
+               alt="Pin Image" 
+               style="max-width:100%; border-radius:4px; margin-top:0.5rem;">
+        `;
+      }
+      const likeCount = pinData.likes || 0;
+      const dislikeCount = pinData.dislikes || 0;
+      content += `<br><small>Likes: ${likeCount} | Dislikes: ${dislikeCount}</small>`;
+      content += "</div>";
+      marker.bindPopup(content);
+    }
+    
+    // Load pins from Firebase and display them on the globe.
+    function loadPinsFromFirebase() {
+      const pinsRef = ref(db, "pins");
+      onValue(pinsRef, snapshot => {
+        const allUserPins = snapshot.val();
+        if (!allUserPins) return;
+        Object.values(allUserPins).forEach(userPins => {
+          ["eventPins", "moodPins", "shopPins"].forEach(pinType => {
+            const pinGroup = userPins[pinType];
+            if (pinGroup) {
+              Object.values(pinGroup).forEach(pin => {
+                if (pin.geolocation) {
+                  addPin(pin.geolocation.lat, pin.geolocation.lng, pin);
+                }
+              });
+            }
+          });
+        });
+      });
+    }
+    loadPinsFromFirebase();
+
+    // -------------------------------
+    // Mobile-Specific Touch Gestures (Separate Pinch-to-Zoom from Pan)
+    // Zoom only occurs if there is essentially no translation.
+    // Additionally, if the globe is near the North or South Pole (|lat| ≥ 89°),
+    // any pinch gesture that would zoom in (scale > 1) is ignored.
+    // -------------------------------
+    if (window.innerWidth <= 768) {
+      const earthDiv = document.getElementById('earth_div');
+      const hammer = new Hammer.Manager(earthDiv);
+      
+      // Add pinch and pan recognizers.
+      const pinch = new Hammer.Pinch();
+      const pan = new Hammer.Pan({ threshold: 10 });
+      hammer.add([pinch, pan]);
+      
+      let currentZoom = 2;
+      const minZoom = 2;
+      const dampingFactor = 0.5; // Damping for smoother zoom.
+      
+      // Flag to track whether a pan gesture is in progress.
+      let isPanning = false;
+      
+      // Update isPanning flag.
+      hammer.on('panstart', function(ev) {
+        isPanning = true;
+      });
+      hammer.on('panend', function(ev) {
+        isPanning = false;
+      });
+      
+      // Pinch handler: update zoom only if no panning and no significant translation.
+      hammer.on('pinch', function(ev) {
+        if (isPanning) return; // Ignore if panning.
+        if (Math.abs(ev.deltaX) > 15 || Math.abs(ev.deltaY) > 15) return;
+        // Only apply zoom if scale factor is meaningfully different from neutral.
+        if (ev.scale >= 0.9 && ev.scale <= 1.1) return;
+        
+        // Check if current center is near the poles.
+        const center = earth.getCenter(); // [lat, lon]
+        if (Math.abs(center[0]) >= 89) {
+          // If near the pole and the user is attempting to zoom in (scale > 1), ignore the pinch.
+          if (ev.scale > 1) return;
+        }
+        
+        let desiredZoom = currentZoom * (1 + (ev.scale - 1) * dampingFactor);
+        desiredZoom = Math.max(minZoom, desiredZoom);
+        earth.setZoom(desiredZoom);
+      });
+      
+      // Update currentZoom on pinch end.
+      hammer.on('pinchend', function(ev) {
+        currentZoom = earth.getZoom();
+      });
+      
+      // Pan handler: Update the globe's center without affecting zoom.
+      hammer.on('pan', function(ev) {
+        const center = earth.getCenter();
+        const latOffset = ev.deltaY * -0.005;
+        const lngOffset = ev.deltaX * -0.005; // Inverted for natural right-drag.
+        earth.setView([center[0] + latOffset, center[1] + lngOffset], earth.getZoom());
+      });
+    }
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Firebase Test</title>
+</head>
+<body>
+  <h1>Firebase Connection Test</h1>
+  <p>If you see a popup saying "Test pin saved", it worked!</p>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyADk7if-797jFI3Y3IUCnCXFSlOsFmX_3k",
+      authDomain: "spoton-cit481.firebaseapp.com",
+      databaseURL: "https://spoton-cit481-default-rtdb.firebaseio.com",
+      projectId: "spoton-cit481",
+      storageBucket: "spoton-cit481.appspot.com",
+      messagingSenderId: "753873898041",
+      appId: "1:753873898041:web:bde5e8f86aea63b175dbe8"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const newPinRef = push(ref(db, 'pins'));
+    set(newPinRef, {
+      title: "Temporary Test Pin",
+      description: "Just checking if Firebase is connected.",
+      songLink: "",
+      geolocation: {
+        lat: 34.0522,
+        lng: -118.2437
+      },
+      userId: "admin",
+      timestamp: Date.now()
+    })
+    .then(() => {
+      alert("Test pin saved to Firebase!");
+    })
+    .catch((err) => {
+      console.error("Error:", err);
+      alert("Something went wrong. Check console.");
+    });
+  </script>
+</body>
+</html>

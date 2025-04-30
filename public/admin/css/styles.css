@@ -1,0 +1,39 @@
+/* Basic Styling */
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+}
+
+#map-container {
+    text-align: center;
+    padding: 10px;
+    background: #333;
+    color: white;
+}
+
+#map {
+    height: 600px;
+    margin: 0 auto;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+}
+
+/* Navigation Bar Styling */
+.navbar {
+    margin-bottom: 15px;
+}
+
+/* Active Navigation Link */
+.navbar-nav .nav-link.active {
+    font-weight: bold;
+    text-decoration: underline;
+}
+
+/* Existing styles */
+#map-container {
+    text-align: center;
+    padding: 10px;
+    background: #333;
+    color: white;
+}
