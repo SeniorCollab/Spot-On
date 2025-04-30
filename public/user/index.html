@@ -225,6 +225,27 @@
         right: 10px;
       }
     }
+        /* ─── AI results drawer ─────────────────────────── */
+    .info-drawer{
+      position:fixed; top:0; right:-350px; width:320px; height:100%;
+      background:rgba(0,0,0,.95); border-left:2px solid #00ffff;
+      overflow-y:auto; z-index:30; transition:right .3s ease;
+    }
+    .info-drawer.open{ right:0; }
+
+    .drawer-close{
+      position:absolute; top:10px; right:12px;
+      background:none; border:none; color:#00ffff;
+      font-size:1.5rem; cursor:pointer;
+    }
+
+    .card.concert,.card.tourist{
+      background:rgba(0,31,63,.8); border:1px solid #00ffff;
+      border-radius:6px; padding:8px; margin-bottom:12px;
+    }
+    .card.concert h4,.card.tourist h4,
+    .card.concert a,.card.tourist a{ color:#00ffff; }
+
   </style>
 </head>
 <body>
@@ -235,6 +256,13 @@
 
   <!-- WebGL Earth Container -->
   <div id="earth_div"></div>
+
+  <!-- AI results drawer -->
+<aside id="infoDrawer" class="info-drawer">
+  <button id="drawerClose" class="drawer-close">&times;</button>
+  <div id="drawerContent" class="p-3"></div>
+</aside>
+
 
   <!-- Custom Hamburger (Offcanvas Toggle) -->
   <button class="hamburger-btn" type="button" id="offcanvasToggle" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar" aria-controls="offcanvasNavbar">
@@ -381,10 +409,11 @@
 
   <!-- Firebase v10+ and App Logic -->
   <script type="module">
-    import { fetchAISuggestion } from "./js/aiSuggest.js";   /* ← NEW */
+    
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getDatabase, ref, push, set, onValue, get, update, remove } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+    import { suggestLocation, openDrawer } from "js/ai.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyADk7if-797jFI3Y3IUCnCXFSlOsFmX_3k",
@@ -440,48 +469,23 @@
       lastClickTime = now;
     });
 
-    function handleDoubleClick(event) {
+    async function handleDoubleClick(event) {
       if (!event.latlng) return;
       const { lat, lng } = event.latlng;
-
-      // keep coords in hidden inputs
+    
+      // ① Ask AI and open drawer
+      suggestLocation(lat, lng)
+        .then(openDrawer)
+        .catch(err => console.error('AI error:', err));
+    
+      // ② Existing pin-creation logic (unchanged)
       ["Simple","Det","Shop"].forEach(t=>{
         document.getElementById(`modalLat${t}`).value = lat.toFixed(5);
         document.getElementById(`modalLng${t}`).value = lng.toFixed(5);
       });
-
-      // ask backend AI for suggestions
-      (async()=>{
-        try {
-          const ai = await fetchAISuggestion(lat, lng, earth.getZoom());
-          document.getElementById("modalTitleSimple").value = ai.suggested_title || "";
-          document.getElementById("modalDescSimple").value  = ai.suggested_description || "";
-          showToast(ai.summary || "Here are some local tips!");
-        } catch(e) {
-          console.error("AI suggestion failed:", e);
-        }
-      })();
-
       editingPinId = null;
       editingPinType = null;
       modal.show();
-    }
-
-    function showToast(msg) {
-      if (!bootstrap.Toast) { alert(msg); return; }
-      const t = Object.assign(
-        document.createElement("div"),
-        {
-          className:
-            "toast align-items-center text-bg-dark border-0 position-fixed bottom-0 end-0 m-3",
-          innerHTML: `<div class="d-flex">
-                        <div class="toast-body">${msg}</div>
-                        <button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                      </div>`
-        }
-      );
-      document.body.appendChild(t);
-      new bootstrap.Toast(t, { delay: 6000 }).show();
     }
 
     // Filter button
@@ -966,6 +970,7 @@
       });
     }
   </script>
+  <script type="module" src="/user/js/ai.js"></script>
 </body>
 </html>
 
