@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Check Gemini Models</title>
+</head>
+<body>
+  <h2>Open your browser console to see available Gemini models</h2>
+
+  <script type="module">
+    import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+
+    async function listAvailableModels() {
+      const genAI = new GoogleGenerativeAI("YOUR_API_KEY_HERE"); // ⬅️ Paste your real key here
+      try {
+        const models = await genAI.listModels();
+        console.log("✅ Available Gemini Models:");
+        models.models.forEach((model) => {
+          console.log(model.name);
+        });
+      } catch (err) {
+        console.error("❌ Failed to fetch models:", err);
+      }
+    }
+
+    listAvailableModels();
+  </script>
+</body>
+</html>
