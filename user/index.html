@@ -1001,7 +1001,7 @@
 
   async function startChat() {
     const genAI = new GoogleGenerativeAI("AIzaSyBUaJbXwVgZpOpy0sr7HmCE38OAozsu5pc");
-    const model = await genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = await genAI.getGenerativeModel({ model: "models/gemini-1.5-pro" });
 
     chatToggle.addEventListener('click', () => {
       chatBox.style.display = chatBox.style.display === 'flex' ? 'none' : 'flex';
