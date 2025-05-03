@@ -225,27 +225,6 @@
         right: 10px;
       }
     }
-        /* ─── AI results drawer ─────────────────────────── */
-    .info-drawer{
-      position:fixed; top:0; right:-350px; width:320px; height:100%;
-      background:rgba(0,0,0,.95); border-left:2px solid #00ffff;
-      overflow-y:auto; z-index:30; transition:right .3s ease;
-    }
-    .info-drawer.open{ right:0; }
-
-    .drawer-close{
-      position:absolute; top:10px; right:12px;
-      background:none; border:none; color:#00ffff;
-      font-size:1.5rem; cursor:pointer;
-    }
-
-    .card.concert,.card.tourist{
-      background:rgba(0,31,63,.8); border:1px solid #00ffff;
-      border-radius:6px; padding:8px; margin-bottom:12px;
-    }
-    .card.concert h4,.card.tourist h4,
-    .card.concert a,.card.tourist a{ color:#00ffff; }
-
   </style>
 </head>
 <body>
@@ -256,13 +235,6 @@
 
   <!-- WebGL Earth Container -->
   <div id="earth_div"></div>
-
-  <!-- AI results drawer -->
-<aside id="infoDrawer" class="info-drawer">
-  <button id="drawerClose" class="drawer-close">&times;</button>
-  <div id="drawerContent" class="p-3"></div>
-</aside>
-
 
   <!-- Custom Hamburger (Offcanvas Toggle) -->
   <button class="hamburger-btn" type="button" id="offcanvasToggle" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar" aria-controls="offcanvasNavbar">
@@ -409,11 +381,9 @@
 
   <!-- Firebase v10+ and App Logic -->
   <script type="module">
-    
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getDatabase, ref, push, set, onValue, get, update, remove } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-    import { suggestLocation, openDrawer } from "js/ai.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyADk7if-797jFI3Y3IUCnCXFSlOsFmX_3k",
@@ -469,23 +439,18 @@
       lastClickTime = now;
     });
 
-    async function handleDoubleClick(event) {
-      if (!event.latlng) return;
-      const { lat, lng } = event.latlng;
-    
-      // ① Ask AI and open drawer
-      suggestLocation(lat, lng)
-        .then(openDrawer)
-        .catch(err => console.error('AI error:', err));
-    
-      // ② Existing pin-creation logic (unchanged)
-      ["Simple","Det","Shop"].forEach(t=>{
-        document.getElementById(`modalLat${t}`).value = lat.toFixed(5);
-        document.getElementById(`modalLng${t}`).value = lng.toFixed(5);
-      });
-      editingPinId = null;
-      editingPinType = null;
-      modal.show();
+    function handleDoubleClick(event) {
+      if (event.latlng) {
+        const { lat, lng } = event.latlng;
+        ["Simple", "Det", "Shop"].forEach(type => {
+          document.getElementById(`modalLat${type}`).value = lat.toFixed(5);
+          document.getElementById(`modalLng${type}`).value = lng.toFixed(5);
+        });
+        // Indicate new pin creation
+        editingPinId = null;
+        editingPinType = null;
+        modal.show();
+      }
     }
 
     // Filter button
@@ -970,7 +935,6 @@
       });
     }
   </script>
-  <script type="module" src="/user/js/ai.js"></script>
 </body>
 </html>
 
