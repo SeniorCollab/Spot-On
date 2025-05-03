@@ -999,32 +999,37 @@
   const chatMessages = document.getElementById('chat-messages');
   const chatInput = document.getElementById('chat-input');
 
-  const genAI = new GoogleGenerativeAI("AIzaSyBUaJbXwVgZpOpy0sr7HmCE38OAozsu5pc");
-  let model = await genAI.getGenerativeModel({ model: "gemini-pro" });
+  async function startChat() {
+    const genAI = new GoogleGenerativeAI("AIzaSyBUaJbXwVgZpOpy0sr7HmCE38OAozsu5pc");
+    const model = await genAI.getGenerativeModel({ model: "gemini-pro" });
 
-  chatToggle.addEventListener('click', () => {
-    chatBox.style.display = chatBox.style.display === 'flex' ? 'none' : 'flex';
-  });
+    chatToggle.addEventListener('click', () => {
+      chatBox.style.display = chatBox.style.display === 'flex' ? 'none' : 'flex';
+    });
 
-  chatInput.addEventListener('keypress', async (e) => {
-    if (e.key === 'Enter' && chatInput.value.trim() !== '') {
-      const userMsg = chatInput.value;
-      appendMessage('user', userMsg);
-      chatInput.value = '';
+    chatInput.addEventListener('keypress', async (e) => {
+      if (e.key === 'Enter' && chatInput.value.trim() !== '') {
+        const userMsg = chatInput.value;
+        appendMessage('user', userMsg);
+        chatInput.value = '';
 
-      const result = await model.generateContent(userMsg);
-      const response = result.response.text();
-      appendMessage('bot', response);
+        const result = await model.generateContent(userMsg);
+        const response = result.response.text();
+        appendMessage('bot', response);
+      }
+    });
+
+    function appendMessage(sender, text) {
+      const msg = document.createElement('div');
+      msg.textContent = (sender === 'user' ? '🧑 ' : '🤖 ') + text;
+      chatMessages.appendChild(msg);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
     }
-  });
-
-  function appendMessage(sender, text) {
-    const msg = document.createElement('div');
-    msg.textContent = (sender === 'user' ? '🧑 ' : '🤖 ') + text;
-    chatMessages.appendChild(msg);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
   }
+
+  startChat();
 </script>
+
 
 </body>
 </html>
