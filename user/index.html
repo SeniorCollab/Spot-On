@@ -944,7 +944,6 @@
   </div>
 </div>
 
-<!-- Styling + Script from previous message -->
 <style>
   #gemini-chat-widget {
     position: fixed;
@@ -953,7 +952,6 @@
     font-family: sans-serif;
     z-index: 9999;
   }
-
   #chat-toggle {
     background: #0077ff;
     color: white;
@@ -962,7 +960,6 @@
     cursor: pointer;
     box-shadow: 0 0 10px #0077ff;
   }
-
   #chat-box {
     display: none;
     flex-direction: column;
@@ -974,13 +971,11 @@
     box-shadow: 0 0 15px rgba(0,0,0,0.3);
     overflow: hidden;
   }
-
   #chat-messages {
     flex: 1;
     padding: 10px;
     overflow-y: auto;
   }
-
   #chat-input {
     border: none;
     border-top: 1px solid #ddd;
@@ -993,6 +988,21 @@
 
 <script type="module">
   import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+  import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+
+  // Firebase init
+  const firebaseConfig = {
+    apiKey: "AIzaSyADk7if-797jFI3Y3IUCnCXFSlOsFmX_3k",
+    authDomain: "spoton-cit481.firebaseapp.com",
+    databaseURL: "https://spoton-cit481-default-rtdb.firebaseio.com",
+    projectId: "spoton-cit481",
+    storageBucket: "spoton-cit481.appspot.com",
+    messagingSenderId: "753873898041",
+    appId: "1:753873898041:web:bde5e8f86aea63b175dbe8"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
 
   const chatToggle = document.getElementById('chat-toggle');
   const chatBox = document.getElementById('chat-box');
@@ -1013,9 +1023,18 @@
         appendMessage('user', userMsg);
         chatInput.value = '';
 
-        const result = await model.generateContent(userMsg);
-        const response = result.response.text();
-        appendMessage('bot', response);
+        const pinData = await fetchPins();
+        const pinsSummary = pinData.map(p => `${p.title} at (${p.lat}, ${p.lng}): ${p.description}`).join("\\n");
+        const prompt = `Here are some pins:\\n${pinsSummary}\\n\\n${userMsg}`;
+
+        try {
+          const result = await model.generateContent(prompt);
+          const response = result.response.text();
+          appendMessage('bot', response);
+        } catch (err) {
+          appendMessage('bot', '⚠️ Sorry, something went wrong.');
+          console.error(err);
+        }
       }
     });
 
@@ -1025,12 +1044,30 @@
       chatMessages.appendChild(msg);
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
+
+    async function fetchPins() {
+      const snapshot = await get(ref(db, 'pins'));
+      const data = snapshot.val();
+      if (!data) return [];
+
+      const pins = [];
+      for (const [userId, userData] of Object.entries(data)) {
+        for (const type of ['eventPins', 'moodPins', 'shopPins']) {
+          const group = userData[type];
+          if (!group) continue;
+          for (const pin of Object.values(group)) {
+            pins.push({
+              title: pin.title || 'Untitled',
+              description: pin.description || '',
+              lat: pin.geolocation?.lat || 'unknown',
+              lng: pin.geolocation?.lng || 'unknown'
+            });
+          }
+        }
+      }
+      return pins;
+    }
   }
 
   startChat();
 </script>
-
-
-</body>
-</html>
-
