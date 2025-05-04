@@ -1704,6 +1704,7 @@
 <script type="module">
   import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
   import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
 
   // Firebase init
@@ -1718,6 +1719,15 @@
   };
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
+  const auth = getAuth(app);
+
+  let currentUser = null;
+
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      currentUser = user;
+    }
+  });
 
   const chatToggle = document.getElementById('chat-toggle');
   const chatBox = document.getElementById('chat-box');
@@ -1739,8 +1749,7 @@
         chatInput.value = '';
 
         const pinData = await fetchPins();
-        const pinsSummary = pinData.map(p => `${p.title} at (${p.lat}, ${p.lng}): ${p.description}`).join("\\n");
-        const prompt = `Here are some pins:\\n${pinsSummary}\\n\\n${userMsg}`;
+        const prompt = buildOrganizedPrompt(pinData, userMsg);
 
         try {
           const result = await model.generateContent(prompt);
@@ -1775,17 +1784,51 @@
               title: pin.title || 'Untitled',
               description: pin.description || '',
               lat: pin.geolocation?.lat || 'unknown',
-              lng: pin.geolocation?.lng || 'unknown'
+              lng: pin.geolocation?.lng || 'unknown',
+              type,
+              isMine: userId === currentUser?.uid
             });
           }
         }
       }
       return pins;
     }
+
+    function buildOrganizedPrompt(pins, userMsg) {
+      const categorized = {
+        "All Event Pins": [],
+        "All Mood Pins": [],
+        "All Shop Pins": [],
+        "My Event Pins": [],
+        "My Mood Pins": [],
+        "My Shop Pins": []
+      };
+
+      for (const pin of pins) {
+        const line = `- "${pin.title}" at (${pin.lat}, ${pin.lng}): ${pin.description}`;
+        if (pin.type === "eventPins") {
+          pin.isMine ? categorized["My Event Pins"].push(line) : categorized["All Event Pins"].push(line);
+        } else if (pin.type === "moodPins") {
+          pin.isMine ? categorized["My Mood Pins"].push(line) : categorized["All Mood Pins"].push(line);
+        } else if (pin.type === "shopPins") {
+          pin.isMine ? categorized["My Shop Pins"].push(line) : categorized["All Shop Pins"].push(line);
+        }
+      }
+
+      let organizedPrompt = "Here are the categorized pins:\\n\\n";
+      for (const [category, items] of Object.entries(categorized)) {
+        if (items.length > 0) {
+          organizedPrompt += `[${category}]\\n${items.join("\\n")}\\n\\n`;
+        }
+      }
+
+      return `${organizedPrompt}Now answer this question:\n${userMsg}`;
+    }
   }
 
   startChat();
 </script>
+
 </body>
 </html>
 </body>
