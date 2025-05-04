@@ -1147,6 +1147,24 @@
   const chatMessages = document.getElementById('chat-messages');
   const chatInput = document.getElementById('chat-input');
 
+  async function reverseGeocode(lat, lng) {
+    const apiKey = "75204efa0be04a04b8acbd2fdf957fbf";
+    const url = `https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lng}&key=${apiKey}&no_annotations=1&language=en`;
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("API error");
+      const data = await res.json();
+      const comp = data.results[0]?.components;
+      const city = comp?.city || comp?.town || comp?.village || "";
+      const country = comp?.country || "";
+      return `${city ? city + ', ' : ''}${country}`.trim();
+    } catch (err) {
+      console.warn("🌍 Reverse geocoding failed:", err);
+      return `(${lat}, ${lng})`;
+    }
+  }
+
   async function startChat() {
     const genAI = new GoogleGenerativeAI("AIzaSyBUaJbXwVgZpOpy0sr7HmCE38OAozsu5pc");
     const model = await genAI.getGenerativeModel({ model: "models/gemini-1.5-pro" });
@@ -1162,8 +1180,14 @@
         chatInput.value = '';
 
         const pinData = await fetchPins();
-        const pinsSummary = pinData.map(p => `${p.title} at (${p.lat}, ${p.lng}): ${p.description}`).join("\\n");
-        const prompt = `Here are some pins:\\n${pinsSummary}\\n\\n${userMsg}`;
+        const pinsSummary = await Promise.all(
+          pinData.map(async (p) => {
+            const location = await reverseGeocode(p.lat, p.lng);
+            return `${p.title} in ${location}: ${p.description}`;
+          })
+        );
+
+        const prompt = `Here are some pins:\n${pinsSummary.join("\n")}\n\n${userMsg}`;
 
         try {
           const result = await model.generateContent(prompt);
@@ -1189,7 +1213,7 @@
       if (!data) return [];
 
       const pins = [];
-      for (const [userId, userData] of Object.entries(data)) {
+      for (const userData of Object.values(data)) {
         for (const type of ['eventPins', 'moodPins', 'shopPins']) {
           const group = userData[type];
           if (!group) continue;
@@ -1197,8 +1221,8 @@
             pins.push({
               title: pin.title || 'Untitled',
               description: pin.description || '',
-              lat: pin.geolocation?.lat || 'unknown',
-              lng: pin.geolocation?.lng || 'unknown'
+              lat: pin.geolocation?.lat || 0,
+              lng: pin.geolocation?.lng || 0
             });
           }
         }
