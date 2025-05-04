@@ -575,6 +575,1221 @@
     });
   </script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Merged Pins - Spot On</title>
+
+  <!-- Orbitron Font & Bootstrap CSS -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    /* Global Tron-inspired Styles */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      overflow-x: hidden;
+      font-family: 'Orbitron', sans-serif;
+      color: #00ffff; /* Neon cyan text */
+      background-color: #000; /* Dark background */
+    }
+
+    /* Horizontal Icon Navigation Bar */
+    .icon-nav {
+      display: flex;
+      overflow-x: auto;
+      background-color: rgba(0, 31, 63, 0.85);
+      box-shadow: 0 0 10px #00ffff;
+      border-bottom: 1px solid #00ffff;
+      padding: 0.5rem 1rem;
+      gap: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    .icon-nav button {
+      background: none;
+      border: 1px solid #00ffff;
+      color: #00ffff;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      flex-shrink: 0;
+      text-transform: uppercase;
+      font-size: 0.9rem;
+    }
+    .icon-nav button.active {
+      background-color: rgba(0, 255, 255, 0.2);
+    }
+    .icon-nav button:hover {
+      background-color: rgba(0, 255, 255, 0.1);
+    }
+
+    /* Offcanvas Toggle (Hamburger) */
+    #offcanvasToggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1200;
+      background: none;
+      border: none;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .hamburger-icon {
+      width: 30px;
+      height: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .hamburger-icon span {
+      display: block;
+      height: 4px;
+      width: 100%;
+      background-color: #00ffff;
+      border-radius: 2px;
+      box-shadow: 0 0 5px #00ffff;
+    }
+
+    /* Offcanvas */
+    .offcanvas {
+      background-color: rgba(0, 0, 0, 0.95);
+      border-left: 2px solid #00ffff;
+    }
+    .offcanvas-header,
+    .offcanvas-body,
+    .offcanvas-title {
+      color: #00ffff;
+    }
+    .offcanvas .nav-link {
+      color: #00ffff;
+      border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+      padding: 0.75rem 1rem;
+    }
+    .offcanvas .nav-link:hover,
+    .offcanvas .nav-link.active {
+      background-color: rgba(0, 31, 63, 0.5);
+    }
+
+    /* Section Container */
+    .section-container {
+      display: none; /* Only show the active section */
+      padding: 1rem;
+    }
+    .section-container.active {
+      display: block;
+    }
+
+    /* Page Header */
+    .page-header {
+      background: rgba(0, 31, 63, 0.85);
+      border: 1px solid #00ffff;
+      box-shadow: 0 0 10px #00ffff;
+      color: #00ffff;
+      padding: 1.5rem;
+      border-radius: 0.5rem;
+      margin: 1rem 0;
+      text-align: center;
+    }
+    .page-header h2 {
+      font-size: 2rem;
+      margin: 0;
+      text-shadow: 0 0 5px #00ffff;
+    }
+
+    /* Pin Card Styles */
+    .pin-card {
+      background: rgba(0, 31, 63, 0.85);
+      border: 1px solid #00ffff;
+      box-shadow: 0 0 10px #00ffff;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      /* Remove margin-bottom since grid gap handles spacing */
+      position: relative;
+      transition: transform 0.2s, box-shadow 0.2s;
+      aspect-ratio: 1 / 1;  /* Force square shape */
+      overflow: hidden;
+    }
+    .pin-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 15px #00ffff;
+    }
+    .pin-title {
+      font-weight: 600;
+      font-size: 1.1rem;
+      text-shadow: 0 0 5px #00ffff;
+    }
+    .pin-description {
+      color: #66ffff;
+      margin: 0.5rem 0;
+    }
+    .pin-iframe {
+      width: 100%;
+      height: 220px;
+      border: none;
+      margin-top: 0.5rem;
+      box-shadow: 0 0 5px #00ffff;
+    }
+
+    /* Grid layout for displaying pins (all lists use a 3-column grid) */
+    #allPinsList,
+    #myPinsList,
+    #allEventsList,
+    #myEventsList,
+    #allMoodList,
+    #myMoodList {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+
+    /* Checkbox for Bulk Selection */
+    .select-checkbox {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      transform: scale(1.2);
+    }
+
+    /* Bulk Delete, Load More Buttons */
+    .bulk-delete-btn, .load-more-btn {
+      margin-bottom: 1rem;
+      margin-right: 1rem;
+    }
+
+    /* Edit Modal */
+    .modal-content {
+      background-color: #000;
+      color: #00ffff;
+      border: 1px solid #00ffff;
+    }
+    .modal-header, .modal-footer {
+      border-bottom: 1px solid #00ffff;
+      border-top: 1px solid #00ffff;
+    }
+    .form-label {
+      color: #00ffff;
+    }
+    .form-control {
+      background-color: rgba(0,0,0,0.8);
+      color: #00ffff;
+      border: 1px solid #00ffff;
+    }
+
+    /* Mobile-Specific Adjustments */
+    @media (max-width: 576px) {
+      /* Offcanvas Toggle Adjustments */
+      #offcanvasToggle {
+        top: 10px;
+        right: 10px;
+        width: 40px;
+        height: 40px;
+      }
+      /* Hamburger Icon becomes thicker on mobile */
+      .hamburger-icon {
+        width: 30px;
+        height: 30px; /* Increased overall height */
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .hamburger-icon span {
+        height: 8px; /* Increased bar thickness */
+        width: 100%;
+        background-color: #00ffff;
+        border-radius: 2px;
+        box-shadow: 0 0 5px #00ffff;
+      }
+      /* Adjust Grid Layout to Single Column for improved readability */
+      #allPinsList,
+      #myPinsList,
+      #allEventsList,
+      #myEventsList,
+      #allMoodList,
+      #myMoodList {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+      /* For tablet devices, update the grid to 2 columns */
+      #allPinsList,
+      #myPinsList,
+      #allEventsList,
+      #myEventsList,
+      #allMoodList,
+      #myMoodList {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Offcanvas Toggle (Hamburger) -->
+<button class="hamburger-btn" type="button" id="offcanvasToggle" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar">
+  <div class="hamburger-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</button>
+
+<!-- Offcanvas Navigation -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNavbar" aria-labelledby="offcanvasNavbarLabel">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="offcanvasNavbarLabel">Spot On</h5>
+    <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <nav class="navbar">
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+        <li class="nav-item"><a class="nav-link active" href="activity.html">View the Pin</a></li>
+        <li class="nav-item"><a class="nav-link" href="shop.html">Store</a></li>
+        <li class="nav-item"><a class="nav-link" href="guide.html">Instructions</a></li>
+      </ul>
+    </nav>
+    <p class="mt-3">Lets get active user.</p>
+    <!-- Added Logout Button -->
+    <button class="btn btn-danger w-100 mt-3" id="logoutBtn">Log Out</button>
+  </div>
+</div>
+
+<!-- Horizontal Icon Navigation -->
+<div class="icon-nav" id="iconNav">
+  <button data-target="allPinsSection" class="active">All Pins</button>
+  <button data-target="myPinsSection">My Pins</button>
+  <button data-target="allEventsSection">All Events</button>
+  <button data-target="myEventsSection">My Events</button>
+  <button data-target="allMoodSection">All Mood</button>
+  <button data-target="myMoodSection">My Mood</button>
+</div>
+
+<!-- Sections -->
+<div id="allPinsSection" class="section-container active">
+  <div class="page-header"><h2>All Pins</h2></div>
+  <button class="btn btn-outline-info load-more-btn" id="loadMoreAllPinsBtn">Load More</button>
+  <div id="allPinsList"></div>
+</div>
+
+<div id="myPinsSection" class="section-container">
+  <div class="page-header d-flex justify-content-between align-items-center flex-wrap">
+    <h2>My Pins</h2>
+    <button class="btn btn-outline-danger bulk-delete-btn" id="bulkDeleteMyPinsBtn">Delete Selected</button>
+  </div>
+  <div id="myPinsList"></div>
+</div>
+
+<div id="allEventsSection" class="section-container">
+  <div class="page-header"><h2>All Events</h2></div>
+  <button class="btn btn-outline-info load-more-btn" id="loadMoreAllEventsBtn">Load More</button>
+  <div id="allEventsList"></div>
+</div>
+
+<div id="myEventsSection" class="section-container">
+  <div class="page-header d-flex justify-content-between align-items-center flex-wrap">
+    <h2>My Events</h2>
+    <button class="btn btn-outline-danger bulk-delete-btn" id="bulkDeleteMyEventsBtn">Delete Selected</button>
+  </div>
+  <div id="myEventsList"></div>
+</div>
+
+<div id="allMoodSection" class="section-container">
+  <div class="page-header"><h2>All Mood Pins</h2></div>
+  <button class="btn btn-outline-info load-more-btn" id="loadMoreAllMoodBtn">Load More</button>
+  <div id="allMoodList"></div>
+</div>
+
+<div id="myMoodSection" class="section-container">
+  <div class="page-header d-flex justify-content-between align-items-center flex-wrap">
+    <h2>My Mood Pins</h2>
+    <button class="btn btn-outline-danger bulk-delete-btn" id="bulkDeleteMyMoodBtn">Delete Selected</button>
+  </div>
+  <div id="myMoodList"></div>
+</div>
+
+<!-- Edit Modal (for Mood or Event) -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <form class="modal-content" id="editForm">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Pin</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editPinType" />
+        <input type="hidden" id="editPinOwner" />
+        <input type="hidden" id="editPinId" />
+        <div class="mb-3">
+          <label for="editPinTitle" class="form-label">Title</label>
+          <input type="text" class="form-control" id="editPinTitle" required />
+        </div>
+        <div class="mb-3">
+          <label for="editPinDescription" class="form-label">Description</label>
+          <textarea class="form-control" id="editPinDescription" rows="2"></textarea>
+        </div>
+        <div class="mb-3" id="editSongLinkGroup" style="display: none;">
+          <label for="editPinSongLink" class="form-label">Song/Video Link</label>
+          <input type="url" class="form-control" id="editPinSongLink" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-outline-info">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Firebase + Auth Scripts -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+  import { getDatabase, ref, onValue, remove, update, get, query, orderByKey } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+
+  // ------------------- Firebase Config ---------------------
+  const firebaseConfig = {
+    apiKey: "AIzaSyADk7if-797jFI3Y3IUCnCXFSlOsFmX_3k",
+    authDomain: "spoton-cit481.firebaseapp.com",
+    databaseURL: "https://spoton-cit481-default-rtdb.firebaseio.com",
+    projectId: "spoton-cit481",
+    storageBucket: "spoton-cit481.appspot.com",
+    messagingSenderId: "753873898041",
+    appId: "1:753873898041:web:bde5e8f86aea63b175dbe8"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+
+  let currentUser = null;
+
+  // ------------------- HTML Element References -------------------
+  const iconNav = document.getElementById("iconNav");
+  const sections = document.querySelectorAll(".section-container");
+
+  const allPinsList     = document.getElementById("allPinsList");
+  const myPinsList      = document.getElementById("myPinsList");
+  const allEventsList   = document.getElementById("allEventsList");
+  const myEventsList    = document.getElementById("myEventsList");
+  const allMoodList     = document.getElementById("allMoodList");
+  const myMoodList      = document.getElementById("myMoodList");
+
+  const bulkDeleteMyPinsBtn   = document.getElementById("bulkDeleteMyPinsBtn");
+  const bulkDeleteMyEventsBtn = document.getElementById("bulkDeleteMyEventsBtn");
+  const bulkDeleteMyMoodBtn   = document.getElementById("bulkDeleteMyMoodBtn");
+
+  const loadMoreAllPinsBtn     = document.getElementById("loadMoreAllPinsBtn");
+  const loadMoreAllEventsBtn   = document.getElementById("loadMoreAllEventsBtn");
+  const loadMoreAllMoodBtn     = document.getElementById("loadMoreAllMoodBtn");
+
+  // Edit Modal
+  const editModal          = new bootstrap.Modal(document.getElementById("editModal"));
+  const editForm           = document.getElementById("editForm");
+  const editPinType        = document.getElementById("editPinType");
+  const editPinOwner       = document.getElementById("editPinOwner");
+  const editPinId          = document.getElementById("editPinId");
+  const editPinTitle       = document.getElementById("editPinTitle");
+  const editPinDesc        = document.getElementById("editPinDescription");
+  const editPinSongLink    = document.getElementById("editPinSongLink");
+  const editSongLinkGroup  = document.getElementById("editSongLinkGroup");
+
+  // ------------------- Data Storage -------------------
+  let allPinsArray = [];
+  let displayedAllPinsCount = 0;
+
+  let allEventsArray = [];
+  let displayedAllEventsCount = 0;
+
+  let allMoodArray = [];
+  let displayedAllMoodCount = 0;
+
+  let myEventPins = [];
+  let myMoodPins = [];
+
+  // ------------------- Utility Functions -------------------
+  function generateEmbedContent(link) {
+    if (!link) return "";
+    if (link.includes("open.spotify.com/track/")) {
+      const embedUrl = link.replace("open.spotify.com/track/", "open.spotify.com/embed/track/");
+      return `<iframe class="pin-iframe" src="${embedUrl}" allow="encrypted-media" allowfullscreen></iframe>`;
+    }
+    if (link.includes("youtube.com/watch?v=") || link.includes("youtu.be/")) {
+      let videoId = "";
+      if (link.includes("watch?v=")) {
+        videoId = link.split("watch?v=")[1].split("&")[0];
+      } else {
+        videoId = link.split("youtu.be/")[1];
+      }
+      const embedUrl = `https://www.youtube.com/embed/${videoId}`;
+      return `<iframe class="pin-iframe" src="${embedUrl}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+    }
+    return `<iframe class="pin-iframe" src="${link}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+  }
+
+  function createPinCard(pinObj, type, ownerUid, pinKey, isOwner) {
+    const card = document.createElement("div");
+    card.className = "pin-card";
+
+    if (isOwner) {
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.className = "select-checkbox";
+      checkbox.dataset.pinId = pinKey;
+      checkbox.dataset.pinType = type;
+      card.appendChild(checkbox);
+    }
+
+    let html = `<div class="pin-title">${pinObj.title || "Untitled Pin"}</div>`;
+    html += `<div class="pin-description">${pinObj.description || ""}</div>`;
+    if (type === "moodPins" && pinObj.songLink) {
+      html += generateEmbedContent(pinObj.songLink);
+    }
+    if (type === "eventPins" && pinObj.imageUrl) {
+      html += `<img src="${pinObj.imageUrl}" alt="Event Image" class="img-fluid rounded mt-2" style="max-height:250px; object-fit:cover;">`;
+    }
+    if (type === "eventPins" && pinObj.geolocation) {
+      const { lat, lng } = pinObj.geolocation;
+      html += `<div class="pin-description mt-1">Location: ${lat}, ${lng}</div>`;
+    }
+    card.innerHTML += html;
+
+    if (isOwner) {
+      const actions = document.createElement("div");
+      actions.className = "mt-2";
+      const editBtn = document.createElement("button");
+      editBtn.className = "btn btn-sm btn-outline-secondary me-2";
+      editBtn.textContent = "Edit";
+      editBtn.addEventListener("click", () => {
+        editPinType.value = type;
+        editPinOwner.value = ownerUid;
+        editPinId.value = pinKey;
+        editPinTitle.value = pinObj.title || "";
+        editPinDesc.value = pinObj.description || "";
+        if (type === "moodPins") {
+          editSongLinkGroup.style.display = "block";
+          editPinSongLink.value = pinObj.songLink || "";
+        } else {
+          editSongLinkGroup.style.display = "none";
+          editPinSongLink.value = "";
+        }
+        editModal.show();
+      });
+      const delBtn = document.createElement("button");
+      delBtn.className = "btn btn-sm btn-outline-danger";
+      delBtn.textContent = "Delete";
+      delBtn.addEventListener("click", () => {
+        if (confirm("Delete this pin?")) {
+          remove(ref(db, `pins/${ownerUid}/${type}/${pinKey}`));
+        }
+      });
+      actions.appendChild(editBtn);
+      actions.appendChild(delBtn);
+      card.appendChild(actions);
+    }
+    return card;
+  }
+
+  iconNav.addEventListener("click", (e) => {
+    if (e.target.matches("button[data-target]")) {
+      const targetId = e.target.getAttribute("data-target");
+      iconNav.querySelectorAll("button").forEach(btn => btn.classList.remove("active"));
+      e.target.classList.add("active");
+      sections.forEach(sec => {
+        sec.classList.remove("active");
+        if (sec.id === targetId) sec.classList.add("active");
+      });
+    }
+  });
+
+  function bulkDelete(sectionContainerId) {
+    const container = document.getElementById(sectionContainerId);
+    const checkboxes = container.querySelectorAll(".select-checkbox:checked");
+    if (!checkboxes.length) {
+      alert("No pins selected for deletion.");
+      return;
+    }
+    if (!confirm(`Delete ${checkboxes.length} selected pin(s)?`)) {
+      return;
+    }
+    checkboxes.forEach(checkbox => {
+      const pinId = checkbox.dataset.pinId;
+      const pinType = checkbox.dataset.pinType;
+      remove(ref(db, `pins/${currentUser.uid}/${pinType}/${pinId}`));
+    });
+  }
+
+  bulkDeleteMyPinsBtn.addEventListener("click", () => bulkDelete("myPinsSection"));
+  bulkDeleteMyEventsBtn.addEventListener("click", () => bulkDelete("myEventsSection"));
+  bulkDeleteMyMoodBtn.addEventListener("click", () => bulkDelete("myMoodSection"));
+
+  function displayPinsInContainer(pinArray, container, displayedCountRef, howMany=20) {
+    const end = displayedCountRef + howMany;
+    const slice = pinArray.slice(displayedCountRef, end);
+    slice.forEach((item) => {
+      const card = createPinCard(item.pin, item.type, item.ownerUid, item.key, item.isOwner);
+      container.appendChild(card);
+    });
+    return end;
+  }
+
+  loadMoreAllPinsBtn.addEventListener("click", () => {
+    displayedAllPinsCount = displayPinsInContainer(allPinsArray, allPinsList, displayedAllPinsCount, 20);
+    if (displayedAllPinsCount >= allPinsArray.length) {
+      loadMoreAllPinsBtn.style.display = "none";
+    }
+  });
+  loadMoreAllEventsBtn.addEventListener("click", () => {
+    displayedAllEventsCount = displayPinsInContainer(allEventsArray, allEventsList, displayedAllEventsCount, 20);
+    if (displayedAllEventsCount >= allEventsArray.length) {
+      loadMoreAllEventsBtn.style.display = "none";
+    }
+  });
+  loadMoreAllMoodBtn.addEventListener("click", () => {
+    displayedAllMoodCount = displayPinsInContainer(allMoodArray, allMoodList, displayedAllMoodCount, 20);
+    if (displayedAllMoodCount >= allMoodArray.length) {
+      loadMoreAllMoodBtn.style.display = "none";
+    }
+  });
+
+  editForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const pinKey = editPinId.value;
+    const type   = editPinType.value;
+    const owner  = editPinOwner.value;
+    if (owner !== currentUser.uid) {
+      alert("You do not own this pin.");
+      return;
+    }
+    const updates = {
+      title: editPinTitle.value.trim(),
+      description: editPinDesc.value.trim()
+    };
+    if (type === "moodPins") {
+      updates.songLink = editPinSongLink.value.trim();
+    }
+    update(ref(db, `pins/${owner}/${type}/${pinKey}`), updates)
+      .then(() => {
+        editModal.hide();
+      })
+      .catch((err) => {
+        console.error("Error updating pin:", err);
+        alert("Failed to update pin. See console for details.");
+      });
+  });
+
+  const logoutBtn = document.getElementById("logoutBtn");
+  logoutBtn.addEventListener("click", () => {
+    signOut(auth)
+      .then(() => {
+        window.location.href = "../index.html";
+      })
+      .catch((err) => {
+        console.error("Sign-out error:", err);
+        alert("Could not sign out. See console for details.");
+      });
+  });
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      window.location.href = "user/userlogin.html";
+      return;
+    }
+    currentUser = user;
+    const myPinsRef = ref(db, `pins/${currentUser.uid}`);
+    onValue(myPinsRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      myPinsList.innerHTML = "";
+      myEventsList.innerHTML = "";
+      myMoodList.innerHTML = "";
+      myEventPins = [];
+      myMoodPins = [];
+      if (data.eventPins) {
+        Object.entries(data.eventPins).forEach(([key, val]) => {
+          const card = createPinCard(val, "eventPins", currentUser.uid, key, true);
+          myPinsList.appendChild(card.cloneNode(true));
+          myEventsList.appendChild(card);
+          myEventPins.push({key, pin: val});
+        });
+      }
+      if (data.moodPins) {
+        Object.entries(data.moodPins).forEach(([key, val]) => {
+          const card = createPinCard(val, "moodPins", currentUser.uid, key, true);
+          myPinsList.appendChild(card.cloneNode(true));
+          myMoodList.appendChild(card);
+          myMoodPins.push({key, pin: val});
+        });
+      }
+    });
+
+    const pinsRootRef = ref(db, "pins");
+    get(query(pinsRootRef, orderByKey()))
+      .then((snap) => {
+        const allData = snap.val() || {};
+        let tempAllPins = [];
+        let tempAllEvents = [];
+        let tempAllMood = [];
+        Object.entries(allData).forEach(([uid, userPins]) => {
+          if (userPins.eventPins) {
+            Object.entries(userPins.eventPins).forEach(([pinId, pinVal]) => {
+              const item = {
+                pin: pinVal,
+                type: "eventPins",
+                ownerUid: uid,
+                key: pinId,
+                isOwner: (uid === currentUser.uid)
+              };
+              tempAllPins.push(item);
+              tempAllEvents.push(item);
+            });
+          }
+          if (userPins.moodPins) {
+            Object.entries(userPins.moodPins).forEach(([pinId, pinVal]) => {
+              const item = {
+                pin: pinVal,
+                type: "moodPins",
+                ownerUid: uid,
+                key: pinId,
+                isOwner: (uid === currentUser.uid)
+              };
+              tempAllPins.push(item);
+              tempAllMood.push(item);
+            });
+          }
+        });
+        tempAllPins.sort((a, b) => a.key.localeCompare(b.key));
+        tempAllEvents.sort((a, b) => a.key.localeCompare(b.key));
+        tempAllMood.sort((a, b) => a.key.localeCompare(b.key));
+        allPinsArray = tempAllPins;
+        allEventsArray = tempAllEvents;
+        allMoodArray = tempAllMood;
+        displayedAllPinsCount = 0;
+        displayedAllEventsCount = 0;
+        displayedAllMoodCount = 0;
+        allPinsList.innerHTML = "";
+        allEventsList.innerHTML = "";
+        allMoodList.innerHTML = "";
+        loadMoreAllPinsBtn.style.display = allPinsArray.length > 20 ? "inline-block" : "none";
+        loadMoreAllEventsBtn.style.display = allEventsArray.length > 20 ? "inline-block" : "none";
+        loadMoreAllMoodBtn.style.display = allMoodArray.length > 20 ? "inline-block" : "none";
+        displayedAllPinsCount = displayPinsInContainer(allPinsArray, allPinsList, displayedAllPinsCount, 20);
+        displayedAllEventsCount = displayPinsInContainer(allEventsArray, allEventsList, displayedAllEventsCount, 20);
+        displayedAllMoodCount = displayPinsInContainer(allMoodArray, allMoodList, displayedAllMoodCount, 20);
+      })
+      .catch(err => {
+        console.error("Error fetching all pins:", err);
+      });
+  });
+</script>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Instructional Pictures - Spot On</title>
+  <!-- Orbitron Font & Bootstrap CSS -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    /* Global Tron-inspired Styles */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      overflow-x: hidden;
+      font-family: 'Orbitron', sans-serif;
+      color: #00ffff;  /* Neon cyan */
+      background-color: #000; /* Dark background */
+    }
+    /* Offcanvas Toggle (if you want to leave it in case of navigation) */
+    #offcanvasToggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1050;
+      background: none;
+      border: none;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .hamburger-icon {
+      width: 30px;
+      height: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .hamburger-icon span {
+      display: block;
+      height: 4px;
+      width: 100%;
+      background-color: #00ffff;
+      border-radius: 2px;
+      box-shadow: 0 0 5px #00ffff;
+    }
+    /* Offcanvas Sidebar (optional, if you need navigation) */
+    .offcanvas {
+      background-color: rgba(0, 0, 0, 0.95);
+      border-left: 2px solid #00ffff;
+    }
+    .offcanvas-header,
+    .offcanvas-body,
+    .offcanvas-title {
+      color: #00ffff;
+    }
+    .offcanvas .nav-link {
+      color: #00ffff;
+      border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+      padding: 0.75rem 1rem;
+    }
+    .offcanvas .nav-link:hover,
+    .offcanvas .nav-link.active {
+      background-color: rgba(0, 31, 63, 0.5);
+    }
+    /* Logout Button Styling */
+    .logout-btn {
+      background-color: #ff3333;
+      color: #000;
+      border: none;
+      padding: 0.75rem 1rem;
+      width: 100%;
+      border-radius: 5px;
+      margin-top: 1rem;
+      text-transform: uppercase;
+    }
+    /* Page Header */
+    .page-header {
+      background: rgba(0, 31, 63, 0.85);
+      border: 1px solid #00ffff;
+      box-shadow: 0 0 10px #00ffff;
+      color: #00ffff;
+      padding: 2rem;
+      border-radius: 0.5rem;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+    .page-header h1 {
+      font-size: 2.5rem;
+      margin: 0;
+      text-shadow: 0 0 5px #00ffff;
+    }
+    .page-header p {
+      font-size: 1.2rem;
+      margin: 0;
+      text-shadow: 0 0 3px #00ffff;
+    }
+    /* Instructional Picture Card */
+    .instruction-card {
+      background: rgba(0, 31, 63, 0.85);
+      border: 1px solid #00ffff;
+      box-shadow: 0 0 10px #00ffff;
+      border-radius: 0.75rem;
+      overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      margin-bottom: 1.5rem;
+    }
+    .instruction-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 0 15px #00ffff;
+    }
+    .instruction-card img {
+      width: 100%;
+      height: auto;
+      object-fit: cover;
+      border-bottom: 1px solid #00ffff;
+    }
+    .instruction-card .card-body {
+      padding: 1rem;
+    }
+    .instruction-title {
+      font-weight: 600;
+      font-size: 1.3rem;
+      color: #00ffff;
+      text-shadow: 0 0 5px #00ffff;
+    }
+    .instruction-text {
+      color: #66ffff;
+      text-shadow: 0 0 3px #00ffff;
+      margin-top: 0.5rem;
+    }
+    /* Container Adjustments */
+    .container {
+      padding-top: 80px;
+      padding-bottom: 2rem;
+    }
+
+    /* Mobile-Specific Adjustments */
+    @media (max-width: 576px) {
+      /* Offcanvas Toggle Adjustments */
+      #offcanvasToggle {
+        top: 10px;
+        right: 10px;
+        width: 40px;
+        height: 40px;
+      }
+      /* Hamburger Icon becomes thicker on mobile */
+      .hamburger-icon {
+        width: 30px;
+        height: 30px; /* Increased overall height */
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .hamburger-icon span {
+        height: 8px; /* Increased bar thickness */
+        width: 100%;
+        background-color: #00ffff;
+        border-radius: 2px;
+        box-shadow: 0 0 5px #00ffff;
+      }
+      /* Adjust container padding for small devices */
+      .container {
+        padding-top: 60px;
+        padding-bottom: 1.5rem;
+      }
+    }
+    @media (max-width: 768px) {
+      /* For tablets, Bootstrap grid classes handle column adjustments */
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Optional Offcanvas Toggle (for navigation) -->
+  <button class="hamburger-btn" type="button" id="offcanvasToggle" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar">
+    <div class="hamburger-icon">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  </button>
+
+  <!-- Offcanvas Navigation -->
+  <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNavbar" aria-labelledby="offcanvasNavbarLabel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id="offcanvasNavbarLabel">Spot On</h5>
+      <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+      <nav class="navbar">
+        <ul class="navbar-nav">
+          <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+          <li class="nav-item"><a class="nav-link active" href="activity.html">View the Pin</a></li>
+          <li class="nav-item"><a class="nav-link" href="shop.html">Store</a></li>
+          <li class="nav-item"><a class="nav-link" href="guide.html">Instructions</a></li>
+        </ul>
+      </nav>
+      <p class="mt-3">Instructional Pictures for Your Journey</p>
+      <!-- Added Logout Button -->
+      <button class="logout-btn" id="logoutBtn">Log Out</button>
+    </div>
+  </div>
+
+  <!-- Page Header -->
+  <div class="container">
+    <div class="page-header">
+      <h1 class="display-5">Instructional Pictures</h1>
+      <p class="lead">Follow these steps visually to master the process.</p>
+    </div>
+
+    <!-- Instructional Pictures Gallery -->
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+      <!-- Example Picture 1 -->
+      <!-- Step 1 -->
+<div class="col">
+  <div class="instruction-card">
+    <img src="../step1.jpg" alt="Step 1">
+    <div class="card-body">
+      <div class="instruction-title">Step 1</div>
+      <div class="instruction-text">
+        Go to the homepage and click "Sign Up" to create an account, or "User" to log in if you already have an account.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Step 2 -->
+<div class="col">
+  <div class="instruction-card">
+    <img src="../step2.jpg" alt="Step 2">
+    <div class="card-body">
+      <div class="instruction-title">Step 2</div>
+      <div class="instruction-text">
+        After logging in, you will be redirected to our Instructions page. Click the hamburger icon on the top right, then "Home" to explore the globe. View details by clicking on the pins.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Step 3 -->
+<div class="col">
+  <div class="instruction-card">
+    <img src="../step3.jpg" alt="Step 3">
+    <div class="card-body">
+      <div class="instruction-title">Step 3</div>
+      <div class="instruction-text">
+        To create your own pin, double click anywhere on the globe. Select your pin type.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Step 4 -->
+<div class="col">
+  <div class="instruction-card">
+    <img src="../step4.jpg" alt="Step 4">
+    <div class="card-body">
+      <div class="instruction-title">Step 4</div>
+      <div class="instruction-text">
+        Enter the required information for your pin. Latitude and Longitude are automatically filled based on where you clicked on the globe.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Step 5 -->
+<div class="col">
+  <div class="instruction-card">
+    <img src="../step5.jpg" alt="Step 5">
+    <div class="card-body">
+      <div class="instruction-title">Step 5</div>
+      <div class="instruction-text">
+       Click on the hamburger icon on the top right. To see posted pins, click on "View the Pin." Here, you can choose to see all pins posted by all users or your own.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Step 6 -->
+<div class="col">
+  <div class="instruction-card">
+    <img src="../step6.jpg" alt="Step 6">
+    <div class="card-body">
+      <div class="instruction-title">Step 6</div>
+      <div class="instruction-text">
+       Need to edit or delete your pin? Locate your pin on the globe and click on it. Click on either edit or delete. This can also be done on the "View the Pin" page. You may only edit and delete your own pins.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Step 7 -->
+<div class="col">
+  <div class="instruction-card">
+    <img src="../step7.jpg" alt="Step 7">
+    <div class="card-body">
+      <div class="instruction-title">Step 7</div>
+      <div class="instruction-text">
+      From the home page, you are also able to adjust the globe to show only your pins or all user pins. Click the hamburger icon, then click show my pins only or  show all pins.      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Step 8 -->
+<div class="col">
+  <div class="instruction-card">
+    <img src="../step8.jpg" alt="Step 8">
+    <div class="card-body">
+      <div class="instruction-title">Step 8</div>
+      <div class="instruction-text">
+        To see shop items, click the hamburger icon and click on "Store." Here, you are able to see all shop pins posted by any user or your own shop pins.
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Step 9 -->
+<div class="col">
+  <div class="instruction-card">
+    <img src="../step9.jpg" alt="Step 9">
+    <div class="card-body">
+      <div class="instruction-title">Step 9</div>
+      <div class="instruction-text">
+        Pinfinity also offers an AI chatbot! On the home screen, click on the chat bubble on the bottom right of the screen. Users can ask the chatbot questions regarding pins.
+      </div>
+    </div>
+  </div>
+</div>
+
+
+  <!-- Firebase SDK & Logout Logic -->
+  <script type="module">
+    import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+    // Initialize Firebase Auth (ensure your Firebase app is already initialized elsewhere if needed)
+    const auth = getAuth();
+    
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      signOut(auth)
+        .then(() => {
+          window.location.href = "../index.html"; // Adjust the redirection as needed
+        })
+        .catch(err => {
+          console.error("Sign-out error:", err);
+          alert("Could not sign out. See console for details.");
+        });
+    });
+  </script>
+
+  <!-- Bootstrap JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+       <!-- Gemini Chat Widget -->
+<div id="gemini-chat-widget">
+  <div id="chat-toggle">💬</div>
+  <div id="chat-box">
+    <div id="chat-messages"></div>
+    <input type="text" id="chat-input" placeholder="Ask me anything..." />
+  </div>
+</div>
+
+<style>
+  #gemini-chat-widget {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    font-family: sans-serif;
+    z-index: 9999;
+  }
+  #chat-toggle {
+    background: #0077ff;
+    color: white;
+    padding: 10px 12px;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 10px #0077ff;
+  }
+  #chat-box {
+    display: none;
+    flex-direction: column;
+    width: 300px;
+    height: 400px;
+    background: white;
+    color: black;
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.3);
+    overflow: hidden;
+  }
+  #chat-messages {
+    flex: 1;
+    padding: 10px;
+    overflow-y: auto;
+  }
+  #chat-input {
+    border: none;
+    border-top: 1px solid #ddd;
+    padding: 10px;
+    width: 100%;
+    box-sizing: border-box;
+    outline: none;
+  }
+</style>
+
+<script type="module">
+  import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+  import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+
+  // Firebase init
+  const firebaseConfig = {
+    apiKey: "AIzaSyADk7if-797jFI3Y3IUCnCXFSlOsFmX_3k",
+    authDomain: "spoton-cit481.firebaseapp.com",
+    databaseURL: "https://spoton-cit481-default-rtdb.firebaseio.com",
+    projectId: "spoton-cit481",
+    storageBucket: "spoton-cit481.appspot.com",
+    messagingSenderId: "753873898041",
+    appId: "1:753873898041:web:bde5e8f86aea63b175dbe8"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  const chatToggle = document.getElementById('chat-toggle');
+  const chatBox = document.getElementById('chat-box');
+  const chatMessages = document.getElementById('chat-messages');
+  const chatInput = document.getElementById('chat-input');
+
+  async function startChat() {
+    const genAI = new GoogleGenerativeAI("AIzaSyBUaJbXwVgZpOpy0sr7HmCE38OAozsu5pc");
+    const model = await genAI.getGenerativeModel({ model: "models/gemini-1.5-pro" });
+
+    chatToggle.addEventListener('click', () => {
+      chatBox.style.display = chatBox.style.display === 'flex' ? 'none' : 'flex';
+    });
+
+    chatInput.addEventListener('keypress', async (e) => {
+      if (e.key === 'Enter' && chatInput.value.trim() !== '') {
+        const userMsg = chatInput.value;
+        appendMessage('user', userMsg);
+        chatInput.value = '';
+
+        const pinData = await fetchPins();
+        const pinsSummary = pinData.map(p => `${p.title} at (${p.lat}, ${p.lng}): ${p.description}`).join("\\n");
+        const prompt = `Here are some pins:\\n${pinsSummary}\\n\\n${userMsg}`;
+
+        try {
+          const result = await model.generateContent(prompt);
+          const response = result.response.text();
+          appendMessage('bot', response);
+        } catch (err) {
+          appendMessage('bot', '⚠️ Sorry, something went wrong.');
+          console.error(err);
+        }
+      }
+    });
+
+    function appendMessage(sender, text) {
+      const msg = document.createElement('div');
+      msg.textContent = (sender === 'user' ? '🧑 ' : '🤖 ') + text;
+      chatMessages.appendChild(msg);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    async function fetchPins() {
+      const snapshot = await get(ref(db, 'pins'));
+      const data = snapshot.val();
+      if (!data) return [];
+
+      const pins = [];
+      for (const [userId, userData] of Object.entries(data)) {
+        for (const type of ['eventPins', 'moodPins', 'shopPins']) {
+          const group = userData[type];
+          if (!group) continue;
+          for (const pin of Object.values(group)) {
+            pins.push({
+              title: pin.title || 'Untitled',
+              description: pin.description || '',
+              lat: pin.geolocation?.lat || 'unknown',
+              lng: pin.geolocation?.lng || 'unknown'
+            });
+          }
+        }
+      }
+      return pins;
+    }
+  }
+
+  startChat();
+</script>
+</body>
+</html>
+</body>
+</html>
 </body>
 </html>
 
