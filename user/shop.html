@@ -1749,7 +1749,7 @@
         chatInput.value = '';
 
         const pinData = await fetchPins();
-        const prompt = buildOrganizedPrompt(pinData, userMsg);
+        const prompt = await buildOrganizedPrompt(pinData, userMsg);
 
         try {
           const result = await model.generateContent(prompt);
@@ -1794,7 +1794,27 @@
       return pins;
     }
 
-    function buildOrganizedPrompt(pins, userMsg) {
+    async function reverseGeocode(lat, lng) {
+      const apiKey = "75204efa0be04a04b8acbd2fdf957fbf"; 
+      const url = `https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lng}&key=${apiKey}&no_annotations=1&language=en`;
+
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Geocoding failed");
+        const data = await res.json();
+        const components = data.results[0]?.components;
+        const city = components?.city || components?.town || components?.village || "";
+        const country = components?.country || "";
+
+        if (!city && !country) throw new Error("No location found");
+        return `${city ? city + ', ' : ''}${country}`;
+      } catch (err) {
+        console.warn("⚠️ Geocoding failed, falling back to coordinates:", err);
+        return `(${lat}, ${lng})`;
+      }
+    }
+
+    async function buildOrganizedPrompt(pins, userMsg) {
       const categorized = {
         "All Event Pins": [],
         "All Mood Pins": [],
@@ -1805,7 +1825,8 @@
       };
 
       for (const pin of pins) {
-        const line = `- "${pin.title}" at (${pin.lat}, ${pin.lng}): ${pin.description}`;
+        const location = await reverseGeocode(pin.lat, pin.lng);
+        const line = `- "${pin.title}" in ${location}: ${pin.description}`;
         if (pin.type === "eventPins") {
           pin.isMine ? categorized["My Event Pins"].push(line) : categorized["All Event Pins"].push(line);
         } else if (pin.type === "moodPins") {
@@ -1815,10 +1836,10 @@
         }
       }
 
-      let organizedPrompt = "Here are the categorized pins:\\n\\n";
+      let organizedPrompt = "Here are the categorized pins:\n\n";
       for (const [category, items] of Object.entries(categorized)) {
         if (items.length > 0) {
-          organizedPrompt += `[${category}]\\n${items.join("\\n")}\\n\\n`;
+          organizedPrompt += `[${category}]\n${items.join("\n")}\n\n`;
         }
       }
 
