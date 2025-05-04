@@ -355,6 +355,142 @@
 
   <!-- Bootstrap JS Bundle -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+       <!-- Gemini Chat Widget -->
+<div id="gemini-chat-widget">
+  <div id="chat-toggle">💬</div>
+  <div id="chat-box">
+    <div id="chat-messages"></div>
+    <input type="text" id="chat-input" placeholder="Ask me anything..." />
+  </div>
+</div>
+
+<style>
+  #gemini-chat-widget {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    font-family: sans-serif;
+    z-index: 9999;
+  }
+  #chat-toggle {
+    background: #0077ff;
+    color: white;
+    padding: 10px 12px;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 10px #0077ff;
+  }
+  #chat-box {
+    display: none;
+    flex-direction: column;
+    width: 300px;
+    height: 400px;
+    background: white;
+    color: black;
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.3);
+    overflow: hidden;
+  }
+  #chat-messages {
+    flex: 1;
+    padding: 10px;
+    overflow-y: auto;
+  }
+  #chat-input {
+    border: none;
+    border-top: 1px solid #ddd;
+    padding: 10px;
+    width: 100%;
+    box-sizing: border-box;
+    outline: none;
+  }
+</style>
+
+<script type="module">
+  import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+  import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+
+  // Firebase init
+  const firebaseConfig = {
+    apiKey: "AIzaSyADk7if-797jFI3Y3IUCnCXFSlOsFmX_3k",
+    authDomain: "spoton-cit481.firebaseapp.com",
+    databaseURL: "https://spoton-cit481-default-rtdb.firebaseio.com",
+    projectId: "spoton-cit481",
+    storageBucket: "spoton-cit481.appspot.com",
+    messagingSenderId: "753873898041",
+    appId: "1:753873898041:web:bde5e8f86aea63b175dbe8"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  const chatToggle = document.getElementById('chat-toggle');
+  const chatBox = document.getElementById('chat-box');
+  const chatMessages = document.getElementById('chat-messages');
+  const chatInput = document.getElementById('chat-input');
+
+  async function startChat() {
+    const genAI = new GoogleGenerativeAI("AIzaSyBUaJbXwVgZpOpy0sr7HmCE38OAozsu5pc");
+    const model = await genAI.getGenerativeModel({ model: "models/gemini-1.5-pro" });
+
+    chatToggle.addEventListener('click', () => {
+      chatBox.style.display = chatBox.style.display === 'flex' ? 'none' : 'flex';
+    });
+
+    chatInput.addEventListener('keypress', async (e) => {
+      if (e.key === 'Enter' && chatInput.value.trim() !== '') {
+        const userMsg = chatInput.value;
+        appendMessage('user', userMsg);
+        chatInput.value = '';
+
+        const pinData = await fetchPins();
+        const pinsSummary = pinData.map(p => `${p.title} at (${p.lat}, ${p.lng}): ${p.description}`).join("\\n");
+        const prompt = `Here are some pins:\\n${pinsSummary}\\n\\n${userMsg}`;
+
+        try {
+          const result = await model.generateContent(prompt);
+          const response = result.response.text();
+          appendMessage('bot', response);
+        } catch (err) {
+          appendMessage('bot', '⚠️ Sorry, something went wrong.');
+          console.error(err);
+        }
+      }
+    });
+
+    function appendMessage(sender, text) {
+      const msg = document.createElement('div');
+      msg.textContent = (sender === 'user' ? '🧑 ' : '🤖 ') + text;
+      chatMessages.appendChild(msg);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    async function fetchPins() {
+      const snapshot = await get(ref(db, 'pins'));
+      const data = snapshot.val();
+      if (!data) return [];
+
+      const pins = [];
+      for (const [userId, userData] of Object.entries(data)) {
+        for (const type of ['eventPins', 'moodPins', 'shopPins']) {
+          const group = userData[type];
+          if (!group) continue;
+          for (const pin of Object.values(group)) {
+            pins.push({
+              title: pin.title || 'Untitled',
+              description: pin.description || '',
+              lat: pin.geolocation?.lat || 'unknown',
+              lng: pin.geolocation?.lng || 'unknown'
+            });
+          }
+        }
+      }
+      return pins;
+    }
+  }
+
+  startChat();
+</script>
 </body>
 </html>
 
