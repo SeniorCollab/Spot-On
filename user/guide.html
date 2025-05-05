@@ -171,6 +171,14 @@
     }
     @media (max-width: 768px) {
       /* For tablets, Bootstrap grid classes handle column adjustments */
+    @media (min-width: 0px) {
+      .col-md-4,
+      .col-sm-6,
+      .col-lg-4 {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+  }
+}
     }
   </style>
 </head>
@@ -375,20 +383,23 @@
   }
 
   /* Floating toggle button */
-  #chat-toggle{
-    background:transparent;
-    color:#00ffff;                    /* neon cyan */
-    padding:12px 14px;
-    border:2px solid #00ffff;
-    border-radius:50%;
-    cursor:pointer;
-    text-shadow:0 0 6px #00ffff;
-    box-shadow:0 0 8px #00ffff,0 0 14px #00ffff;
-    transition:transform .2s ease,box-shadow .2s ease;
+  #chat-toggle {
+    /* same width as #chat-box for a cleaner look */
+    width: 320px;
+    max-width: 100%;
+    padding: 10px 0;
+    border-radius: 12px;
+  
+    /* trim the glow so it’s less intrusive */
+    box-shadow: 0 0 8px #00ffff, 0 0 12px #00ffff;
   }
-  #chat-toggle:hover{
-    transform:scale(1.08);
-    box-shadow:0 0 12px #00ffff,0 0 22px #00ffff;
+  
+  /* optional: keep the label on one line and prevent big ovals */
+  #chat-toggle span,
+  #chat-toggle {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* Chat container */
