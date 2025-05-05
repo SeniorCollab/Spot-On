@@ -945,44 +945,76 @@
 </div>
 
 <style>
-  #gemini-chat-widget {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    font-family: sans-serif;
-    z-index: 9999;
+  /* Overall widget container */
+  #gemini-chat-widget{
+    position:fixed;
+    bottom:20px;
+    right:20px;
+    font-family:'Orbitron',sans-serif;  /* Tron font */
+    z-index:9999;
   }
-  #chat-toggle {
-    background: #0077ff;
-    color: white;
-    padding: 10px 12px;
-    border-radius: 50%;
-    cursor: pointer;
-    box-shadow: 0 0 10px #0077ff;
+
+  /* Floating toggle button */
+  #chat-toggle{
+    background:transparent;
+    color:#00ffff;                    /* neon cyan */
+    padding:12px 14px;
+    border:2px solid #00ffff;
+    border-radius:50%;
+    cursor:pointer;
+    text-shadow:0 0 6px #00ffff;
+    box-shadow:0 0 8px #00ffff,0 0 14px #00ffff;
+    transition:transform .2s ease,box-shadow .2s ease;
   }
-  #chat-box {
-    display: none;
-    flex-direction: column;
-    width: 300px;
-    height: 400px;
-    background: white;
-    color: black;
-    border-radius: 10px;
-    box-shadow: 0 0 15px rgba(0,0,0,0.3);
-    overflow: hidden;
+  #chat-toggle:hover{
+    transform:scale(1.08);
+    box-shadow:0 0 12px #00ffff,0 0 22px #00ffff;
   }
-  #chat-messages {
-    flex: 1;
-    padding: 10px;
-    overflow-y: auto;
+
+  /* Chat container */
+  #chat-box{
+    display:none;                     /* toggled in JS */
+    flex-direction:column;
+    width:320px;
+    height:430px;
+    background:rgba(0,31,63,.95);     /* deep Tron blue */
+    color:#00ffff;
+    border:2px solid #00ffff;
+    border-radius:14px;
+    box-shadow:0 0 12px #00ffff;
+    overflow:hidden;
+    backdrop-filter:blur(4px);
   }
-  #chat-input {
-    border: none;
-    border-top: 1px solid #ddd;
-    padding: 10px;
-    width: 100%;
-    box-sizing: border-box;
-    outline: none;
+
+  /* Messages area */
+  #chat-messages{
+    flex:1;
+    padding:12px;
+    overflow-y:auto;
+    scrollbar-width:thin;
+    scrollbar-color:#00ffff transparent;
+  }
+  #chat-messages::-webkit-scrollbar{
+    width:6px;
+  }
+  #chat-messages::-webkit-scrollbar-thumb{
+    background:#00ffff;
+    border-radius:3px;
+  }
+
+  /* Input field */
+  #chat-input{
+    border:none;
+    border-top:1px solid rgba(0,255,255,.4);
+    background:rgba(0,0,0,.3);
+    color:#00ffff;
+    padding:12px;
+    width:100%;
+    box-sizing:border-box;
+    outline:none;
+  }
+  #chat-input::placeholder{
+    color:rgba(0,255,255,.6);
   }
 </style>
 
